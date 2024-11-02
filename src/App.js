@@ -1,36 +1,48 @@
-import React, { useState } from 'react';
-import { DndContext } from '@dnd-kit/core';
+import React, {useState, useEffect, useRef} from 'react';
+import {DndContext} from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
 import FormCanvas from './components/FormCanvas';
-import TextFieldsIcon from '@mui/icons-material/TextFields';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
-import ArrowDropDownCircleIcon from '@mui/icons-material/ArrowDropDownCircle';
-import EventIcon from '@mui/icons-material/Event';
-import TuneIcon from '@mui/icons-material/Tune';
-import SmartButtonIcon from '@mui/icons-material/SmartButton';
-
-const items = [
-    { id: 'text', label: 'Text Field', icon: <TextFieldsIcon /> },
-    { id: 'checkbox', label: 'Checkbox', icon: <CheckBoxIcon /> },
-    { id: 'radio', label: 'Radio Button', icon: <RadioButtonCheckedIcon /> },
-    { id: 'select', label: 'Dropdown Select', icon: <ArrowDropDownCircleIcon /> },
-    { id: 'date', label: 'Date Picker', icon: <EventIcon /> },
-    { id: 'slider', label: 'Slider', icon: <TuneIcon /> },
-    { id: 'button', label: 'Button', icon: <SmartButtonIcon /> },
-];
+import EditSidebar from './components/EditSidebar';
 
 function App() {
+
+
     const [formElements, setFormElements] = useState([]);
+    const editSidebarRef = useRef(null);
+    const [selectedElement, setSelectedElement] = useState(null);
 
     const handleDrop = (event) => {
-        const { active } = event;
-        setFormElements((prev) => [...prev, { type: active.id, id: Date.now() }]);
+        const {active} = event;
+        setFormElements((prev) => [...prev, {type: active.id, id: Date.now(), name: ''}]);
     };
 
     const handleDeleteElement = (id) => {
         setFormElements((prev) => prev.filter((element) => element.id !== id));
     };
+
+    const handleNameChange = (id, newName) => {
+        setFormElements((prev) =>
+            prev.map((element) => (element.id === id ? {...element, name: newName} : element))
+        );
+    };
+
+    const handleSelectElement = (id) => {
+        const element = formElements.find((el) => el.id === id);
+        setSelectedElement(element);
+    };
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (editSidebarRef.current && !editSidebarRef.current.contains(event.target)) {
+                setSelectedElement(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [selectedElement]);
 
     return (
         <DndContext onDragEnd={handleDrop}>
@@ -43,10 +55,23 @@ function App() {
                     fontFamily: 'Arial, sans-serif',
                 }}
             >
-                <Sidebar items={items} />
-                <div style={{ flex: 1 }}>
-                    <FormCanvas formElements={formElements} onDelete={handleDeleteElement} />
+                <Sidebar/>
+                <div style={{flex: 1}}>
+                    <FormCanvas formElements={formElements} onDelete={handleDeleteElement}
+                                onSelect={handleSelectElement}/>
                 </div>
+                {selectedElement && (
+                    <div ref={editSidebarRef}>
+                        <EditSidebar
+                            className="edit-sidebar"
+                            selectedElement={selectedElement}
+                            onNameChange={(newName) => {
+                                handleNameChange(selectedElement.id, newName);
+                                setSelectedElement((prev) => ({...prev, name: newName}));
+                            }}
+                        />
+                    </div>
+                )}
             </div>
         </DndContext>
     );

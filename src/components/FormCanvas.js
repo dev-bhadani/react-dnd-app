@@ -3,7 +3,7 @@ import {TextField, Checkbox, Button, Radio, Select, MenuItem, Slider} from '@mui
 import {DatePicker, LocalizationProvider} from '@mui/x-date-pickers';
 import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
 
-function FormCanvas({formElements, onDelete}) {
+function FormCanvas({formElements, onDelete, onSelect}) {
     const handleDelete = (id) => {
         if (typeof onDelete === 'function') {
             onDelete(id);
@@ -20,7 +20,7 @@ function FormCanvas({formElements, onDelete}) {
                 padding: '20px',
                 textAlign: 'center',
                 color: '#aaa',
-                fontSize: '40px',
+                fontSize: '18px',
                 width: '95%',
                 minHeight: '800px',
                 backgroundColor: '#ffffff',
@@ -42,7 +42,20 @@ function FormCanvas({formElements, onDelete}) {
                             backgroundColor: '#f5f5f5',
                             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                         }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect(element.id);
+                        }}
                     >
+                        <label style={{
+                            fontWeight: 'bold',
+                            marginRight: '10px',
+                            float: 'left',
+                            display: 'inline-block',
+                            color: 'black'
+                        }}>
+                            {element.name}
+                        </label>
                         <button
                             onClick={() => handleDelete(element.id)}
                             style={{
