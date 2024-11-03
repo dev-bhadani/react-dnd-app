@@ -1,19 +1,19 @@
-import React, {useState, useEffect, useRef} from 'react';
-import {DndContext} from '@dnd-kit/core';
+import React, { useState, useEffect, useRef } from 'react';
+import { DndContext, useDraggable, DragOverlay } from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
-import FormCanvas from './components/FormCanvas';
 import EditSidebar from './components/EditSidebar';
+import DroppableArea from './components/DroppableArea';
 
 function App() {
-
-
     const [formElements, setFormElements] = useState([]);
     const editSidebarRef = useRef(null);
     const [selectedElement, setSelectedElement] = useState(null);
 
     const handleDrop = (event) => {
-        const {active} = event;
-        setFormElements((prev) => [...prev, {type: active.id, id: Date.now(), name: ''}]);
+        const { active, over } = event;
+        if (over) {
+            setFormElements((prev) => [...prev, { type: active.id, id: Date.now(), name: '' }]);
+        }
     };
 
     const handleDeleteElement = (id) => {
@@ -22,7 +22,7 @@ function App() {
 
     const handleNameChange = (id, newName) => {
         setFormElements((prev) =>
-            prev.map((element) => (element.id === id ? {...element, name: newName} : element))
+            prev.map((element) => (element.id === id ? { ...element, name: newName } : element))
         );
     };
 
@@ -49,16 +49,16 @@ function App() {
             <div
                 style={{
                     display: 'flex',
-                    justifyContent: 'space-around',
+                    justifyContent: 'space-between',
                     gap: '20px',
                     padding: '40px',
+                    marginTop: '20px',
                     fontFamily: 'Arial, sans-serif',
                 }}
             >
-                <Sidebar/>
-                <div style={{flex: 1}}>
-                    <FormCanvas formElements={formElements} onDelete={handleDeleteElement}
-                                onSelect={handleSelectElement}/>
+                <Sidebar />
+                <div style={{ flex: 1, marginRight: '20px' }}>
+                    <DroppableArea formElements={formElements} onDelete={handleDeleteElement} onSelect={handleSelectElement} />
                 </div>
                 {selectedElement && (
                     <div ref={editSidebarRef}>
@@ -67,7 +67,7 @@ function App() {
                             selectedElement={selectedElement}
                             onNameChange={(newName) => {
                                 handleNameChange(selectedElement.id, newName);
-                                setSelectedElement((prev) => ({...prev, name: newName}));
+                                setSelectedElement((prev) => ({ ...prev, name: newName }));
                             }}
                         />
                     </div>
