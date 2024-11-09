@@ -1,89 +1,181 @@
 import React from 'react';
-import {TextField, Checkbox, Button, Radio, Select, MenuItem, Slider} from '@mui/material';
-import {DatePicker, LocalizationProvider} from '@mui/x-date-pickers';
-import {AdapterDateFns} from '@mui/x-date-pickers/AdapterDateFns';
 
-function FormPreview({formElements, onClose}) {
+function FormPreview({ formElements, onClose }) {
+    const style = {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '80%',
+        maxWidth: '600px',
+        padding: '20px',
+        borderRadius: '10px',
+        backgroundColor: 'white',
+        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.3)',
+        zIndex: '1000',
+        fontFamily: 'Arial, sans-serif',
+    };
+
+    const overlayStyle = {
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: '999',
+    };
+
     return (
-        <div
-            style={{
-                position: 'fixed',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '500px',
-                maxHeight: '90vh',
-                padding: '40px',
-                border: '1px solid #ddd',
-                borderRadius: '15px',
-                backgroundColor: '#ffffff',
-                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
-                overflowY: 'auto',
-                zIndex: '1000',
-            }}
-        >
-            <h2 style={{textAlign: 'center', fontWeight: 'bold', marginBottom: '20px'}}>Form Preview</h2>
-            {formElements.map((element) => (
-                <div key={element.id} style={{marginBottom: '20px'}}>
-                    <label style={{fontWeight: 'bold', display: 'block', marginBottom: '8px'}}>
-                        {element.type !== 'button' && element.name}
-                    </label>
-                    {renderElement(element)}
+        <>
+            <div style={overlayStyle} onClick={onClose} />
+            <div style={style}>
+                <h3 style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Form Preview</h3>
+                <div>
+                    {formElements.map((element) => {
+                        if (element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow') {
+                            return (
+                                <div
+                                    key={element.id}
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        gap: '10px',
+                                        marginBottom: '20px',
+                                        padding: '10px',
+                                        border: '1px dashed #ccc',
+                                        borderRadius: '10px',
+                                        backgroundColor: '#f9f9f9',
+                                    }}
+                                >
+                                    {[...Array(element.columns.length)].map((_, index) => (
+                                        <div
+                                            key={index}
+                                            style={{
+                                                flex: 1,
+                                                minHeight: '100px',
+                                                border: '1px dashed #ccc',
+                                                padding: '10px',
+                                                borderRadius: '8px',
+                                            }}
+                                        >
+                                            {element.columns[index]?.map((el) => (
+                                                <div
+                                                    key={el.id}
+                                                    style={{
+                                                        padding: '10px',
+                                                        borderRadius: '8px',
+                                                        backgroundColor: '#fafafa',
+                                                        marginBottom: '10px',
+                                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                                    }}
+                                                >
+                                                    {renderPreviewElement(el)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        }
+                        return (
+                            <div
+                                key={element.id}
+                                style={{
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    backgroundColor: '#fafafa',
+                                    marginBottom: '10px',
+                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                }}
+                            >
+                                {renderPreviewElement(element)}
+                            </div>
+                        );
+                    })}
                 </div>
-            ))}
-            <div style={{textAlign: 'center', marginTop: '30px'}}>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    style={{marginRight: '10px'}}
-                    onClick={() => alert('Form Submitted')}
+                <button
+                    onClick={onClose}
+                    style={{
+                        marginTop: '20px',
+                        padding: '10px 20px',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                    }}
                 >
-                    Submit
-                </Button>
-                <Button variant="outlined" color="secondary" onClick={onClose}>
                     Close
-                </Button>
+                </button>
             </div>
-        </div>
+        </>
     );
 }
 
-function renderElement(element) {
+function renderPreviewElement(element) {
     switch (element.type) {
         case 'text':
-            return <TextField label="Text Field" variant="outlined" fullWidth margin="normal"/>;
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Text Field'}
+                    </label>
+                    <input type="text" placeholder="Enter text" style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                </div>
+            );
         case 'checkbox':
-            return <Checkbox label="Aged?"/>;
-        case 'button':
-            return <Button variant="contained" color="primary">{element.name || 'Button'}</Button>;
+            return (
+                <div>
+                    <input type="checkbox" />
+                    <label style={{ marginLeft: '10px' }}>{element.name || 'Checkbox'}</label>
+                </div>
+            );
         case 'radio':
             return (
                 <div>
-                    <Radio/> Option 1
-                    <Radio/> Option 2
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Radio Button'}</label>
+                    <div>
+                        <input type="radio" name={element.id} />
+                        <label style={{ marginLeft: '10px' }}>Option 1</label>
+                    </div>
+                    <div>
+                        <input type="radio" name={element.id} />
+                        <label style={{ marginLeft: '10px' }}>Option 2</label>
+                    </div>
                 </div>
             );
         case 'select':
             return (
-                <Select fullWidth displayEmpty defaultValue="">
-                    <MenuItem value="" disabled>
-                        Select an option
-                    </MenuItem>
-                    <MenuItem value="option1">Option 1</MenuItem>
-                    <MenuItem value="option2">Option 2</MenuItem>
-                </Select>
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Dropdown'}</label>
+                    <select style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }}>
+                        <option>Select an option</option>
+                        <option>Option 1</option>
+                        <option>Option 2</option>
+                    </select>
+                </div>
             );
         case 'date':
             return (
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <DatePicker
-                        label="Select Date"
-                        renderInput={(params) => <TextField {...params} fullWidth margin="normal"/>}
-                    />
-                </LocalizationProvider>
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Date Picker'}</label>
+                    <input type="date" style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                </div>
             );
         case 'slider':
-            return <Slider defaultValue={30} aria-label="Slider"/>;
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Slider'}</label>
+                    <input type="range" min="0" max="100" style={{ width: '100%' }} />
+                </div>
+            );
+        case 'button':
+            return (
+                <button style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}>
+                    {element.name || 'Button'}
+                </button>
+            );
         default:
             return null;
     }

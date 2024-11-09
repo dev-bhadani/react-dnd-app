@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { DndContext } from '@dnd-kit/core';
+import React, {useState, useEffect, useRef} from 'react';
+import {DndContext} from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
 import EditSidebar from './components/EditSidebar';
 import DroppableArea from './components/DroppableArea';
@@ -12,13 +12,12 @@ function App() {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     const handleDrop = (event) => {
-        const { active, over } = event;
+        const {active, over} = event;
         if (over) {
             const overId = over.id;
-            const newElement = { type: active.id, id: Date.now(), name: '', columns: [] };
+            const newElement = {type: active.id, id: Date.now(), name: '', columns: []};
 
             if (overId.includes('column')) {
-                // Handle adding to a column inside a row
                 const [rowId, columnIndex] = overId.split('-column-');
                 setFormElements((prev) =>
                     prev.map((element) => {
@@ -34,7 +33,6 @@ function App() {
                     })
                 );
             } else {
-                // Handle adding directly to the form
                 setFormElements((prev) => [...prev, newElement]);
             }
         }
@@ -46,7 +44,7 @@ function App() {
 
     const handleNameChange = (id, newName) => {
         setFormElements((prev) =>
-            prev.map((element) => (element.id === id ? { ...element, name: newName } : element))
+            prev.map((element) => (element.id === id ? {...element, name: newName} : element))
         );
     };
 
@@ -80,8 +78,8 @@ function App() {
                     fontFamily: 'Arial, sans-serif',
                 }}
             >
-                <Sidebar />
-                <div style={{ flex: 1, marginRight: '20px' }}>
+                <Sidebar/>
+                <div style={{flex: 1, marginRight: '20px'}}>
                     <DroppableArea
                         formElements={formElements}
                         onDelete={handleDeleteElement}
@@ -95,15 +93,23 @@ function App() {
                             selectedElement={selectedElement}
                             onNameChange={(newName) => {
                                 handleNameChange(selectedElement.id, newName);
-                                setSelectedElement((prev) => ({ ...prev, name: newName }));
+                                setSelectedElement((prev) => ({...prev, name: newName}));
                             }}
                         />
                     </div>
                 )}
             </div>
-            <button onClick={() => setIsPreviewOpen(true)} style={{ margin: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}>Preview Form</button>
+            <button onClick={() => setIsPreviewOpen(true)} style={{
+                margin: '20px',
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px'
+            }}>Preview Form
+            </button>
             {isPreviewOpen && (
-                <FormPreview formElements={formElements} onClose={() => setIsPreviewOpen(false)} />
+                <FormPreview formElements={formElements} onClose={() => setIsPreviewOpen(false)}/>
             )}
         </DndContext>
     );

@@ -1,5 +1,6 @@
 import React from 'react';
 import {useDroppable} from '@dnd-kit/core';
+import ColumnRow from './ColumnRow';
 
 function DroppableArea({formElements, onDelete, onSelect}) {
     const {isOver, setNodeRef} = useDroppable({
@@ -71,29 +72,41 @@ function DroppableArea({formElements, onDelete, onSelect}) {
             {formElements.length === 0 ? (
                 <div>Dropzone</div>
             ) : (
-                formElements.map((element) => (
-                    <div
-                        key={element.id}
-                        style={elementStyle}
-                        onClick={() => onSelect(element.id)}
-                    >
-                        <label style={labelStyle}>
-                            {element.type !== 'button' && element.name}
-                        </label>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(element.id);
-                            }}
-                            style={deleteButtonStyle}
+                formElements.map((element) => {
+                    if (element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow') {
+                        return (
+                            <ColumnRow
+                                key={element.id}
+                                element={element}
+                                onDelete={onDelete}
+                                onSelect={onSelect}
+                            />
+                        );
+                    }
+                    return (
+                        <div
+                            key={element.id}
+                            style={elementStyle}
+                            onClick={() => onSelect(element.id)}
                         >
-                            &times;
-                        </button>
-                        <div style={elementContentStyle}>
-                            {renderElement(element)}
+                            <label style={labelStyle}>
+                                {element.type !== 'button' && element.name}
+                            </label>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onDelete(element.id);
+                                }}
+                                style={deleteButtonStyle}
+                            >
+                                &times;
+                            </button>
+                            <div style={elementContentStyle}>
+                                {renderElement(element)}
+                            </div>
                         </div>
-                    </div>
-                ))
+                    );
+                })
             )}
         </div>
     );
@@ -112,7 +125,7 @@ function renderElement(element) {
                         border: '1px solid #ccc',
                         borderRadius: '8px',
                         outline: 'none',
-                        fontSize: '16px'
+                        fontSize: '16px',
                     }}
                 />
             );
@@ -138,7 +151,7 @@ function renderElement(element) {
                         color: 'white',
                         border: 'none',
                         borderRadius: '5px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
                     }}
                 >
                     {element.name || 'Button'}
@@ -153,7 +166,7 @@ function renderElement(element) {
                         borderRadius: '8px',
                         marginLeft: '10px',
                         border: '1px solid #ccc',
-                        fontSize: '16px'
+                        fontSize: '16px',
                     }}
                 >
                     <option>Select an option</option>
@@ -170,7 +183,7 @@ function renderElement(element) {
                         padding: '12px',
                         borderRadius: '8px',
                         marginLeft: '10px',
-                        border: '1px solid #ccc'
+                        border: '1px solid #ccc',
                     }}
                 />
             );
