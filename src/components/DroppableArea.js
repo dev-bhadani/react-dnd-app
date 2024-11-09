@@ -59,30 +59,51 @@ function DroppableArea({formElements, onDelete, onSelect}) {
     };
 
     const elementContentStyle = {
-        marginTop: '20px', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between',
+        marginTop: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        justifyContent: 'space-between',
     };
 
-    return (<div ref={setNodeRef} style={style}>
-        {formElements.length === 0 ? (<div>Dropzone</div>) : (formElements.map((element) => (<div
-            key={element.id}
-            style={elementStyle}
-            onClick={() => onSelect(element.id)}
-        >
-            <label style={labelStyle}>
-                {element.type !== 'button' && element.name}
-            </label>
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(element.id);
-                }}
-                style={deleteButtonStyle}
-            >
-                &times;
-            </button>
-            <div style={elementContentStyle}>
-                {}
-                {element.type === 'text' && (<input
+    return (
+        <div ref={setNodeRef} style={style}>
+            {formElements.length === 0 ? (
+                <div>Dropzone</div>
+            ) : (
+                formElements.map((element) => (
+                    <div
+                        key={element.id}
+                        style={elementStyle}
+                        onClick={() => onSelect(element.id)}
+                    >
+                        <label style={labelStyle}>
+                            {element.type !== 'button' && element.name}
+                        </label>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(element.id);
+                            }}
+                            style={deleteButtonStyle}
+                        >
+                            &times;
+                        </button>
+                        <div style={elementContentStyle}>
+                            {renderElement(element)}
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+    );
+}
+
+function renderElement(element) {
+    switch (element.type) {
+        case 'text':
+            return (
+                <input
                     type="text"
                     placeholder="Text Field"
                     style={{
@@ -93,48 +114,78 @@ function DroppableArea({formElements, onDelete, onSelect}) {
                         outline: 'none',
                         fontSize: '16px'
                     }}
-                />)}
-                {element.type === 'checkbox' &&
-                    <input type="checkbox" style={{marginLeft: '10px', transform: 'scale(1.2)'}}/>}
-                {element.type === 'radio' && (<div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                />
+            );
+        case 'checkbox':
+            return <input type="checkbox" style={{marginLeft: '10px', transform: 'scale(1.2)'}}/>;
+        case 'radio':
+            return (
+                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
                     <label>
                         <input type="radio" name={element.id}/> Option 1
                     </label>
                     <label>
                         <input type="radio" name={element.id}/> Option 2
                     </label>
-                </div>)}
-                {element.type === 'button' && (<button style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer'
-                }}>
+                </div>
+            );
+        case 'button':
+            return (
+                <button
+                    style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer'
+                    }}
+                >
                     {element.name || 'Button'}
-                </button>)}
-                {element.type === 'select' && (<select style={{
-                    width: '100%',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginLeft: '0',
-                    border: '1px solid #ccc',
-                    fontSize: '16px'
-                }}>
+                </button>
+            );
+        case 'select':
+            return (
+                <select
+                    style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        marginLeft: '10px',
+                        border: '1px solid #ccc',
+                        fontSize: '16px'
+                    }}
+                >
                     <option>Select an option</option>
                     <option>Option 1</option>
                     <option>Option 2</option>
-                </select>)}
-                {element.type === 'date' && (<input type="date" style={{
-                    width: '100%', padding: '12px', borderRadius: '8px', marginLeft: '10px', border: '1px solid #ccc'
-                }}/>)}
-                {element.type === 'slider' && (<input type="range" min="0" max="100" style={{
-                    width: '100%', marginLeft: '10px', accentColor: '#007bff'
-                }}/>)}
-            </div>
-        </div>)))}
-    </div>);
+                </select>
+            );
+        case 'date':
+            return (
+                <input
+                    type="date"
+                    style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        marginLeft: '10px',
+                        border: '1px solid #ccc'
+                    }}
+                />
+            );
+        case 'slider':
+            return (
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    style={{width: '100%', marginLeft: '10px', accentColor: '#007bff'}}
+                />
+            );
+        default:
+            return null;
+    }
 }
 
 export default DroppableArea;

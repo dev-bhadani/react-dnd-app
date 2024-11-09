@@ -1,5 +1,5 @@
-import React, {useState, useEffect, useRef} from 'react';
-import {DndContext} from '@dnd-kit/core';
+import React, { useState, useEffect, useRef } from 'react';
+import { DndContext } from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
 import EditSidebar from './components/EditSidebar';
 import DroppableArea from './components/DroppableArea';
@@ -9,12 +9,34 @@ function App() {
     const [formElements, setFormElements] = useState([]);
     const editSidebarRef = useRef(null);
     const [selectedElement, setSelectedElement] = useState(null);
-    const [showPreview, setShowPreview] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     const handleDrop = (event) => {
-        const {active, over} = event;
+        const { active, over } = event;
         if (over) {
-            setFormElements((prev) => [...prev, {type: active.id, id: Date.now(), name: ''}]);
+            const overId = over.id;
+            const newElement = { type: active.id, id: Date.now(), name: '', columns: [] };
+
+            if (overId.includes('column')) {
+                // Handle adding to a column inside a row
+                const [rowId, columnIndex] = overId.split('-column-');
+                setFormElements((prev) =>
+                    prev.map((element) => {
+                        if (element.id === parseInt(rowId)) {
+                            const updatedColumns = [...element.columns];
+                            updatedColumns[columnIndex] = [...(updatedColumns[columnIndex] || []), newElement];
+                            return {
+                                ...element,
+                                columns: updatedColumns,
+                            };
+                        }
+                        return element;
+                    })
+                );
+            } else {
+                // Handle adding directly to the form
+                setFormElements((prev) => [...prev, newElement]);
+            }
         }
     };
 
@@ -23,7 +45,9 @@ function App() {
     };
 
     const handleNameChange = (id, newName) => {
-        setFormElements((prev) => prev.map((element) => (element.id === id ? {...element, name: newName} : element)));
+        setFormElements((prev) =>
+            prev.map((element) => (element.id === id ? { ...element, name: newName } : element))
+        );
     };
 
     const handleSelectElement = (id) => {
@@ -44,51 +68,45 @@ function App() {
         };
     }, [selectedElement]);
 
-    return (<DndContext onDragEnd={handleDrop}>
-        <div
-            style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: '20px',
-                padding: '40px',
-                marginTop: '20px',
-                fontFamily: 'Arial, sans-serif',
-            }}
-        >
-            <Sidebar/>
-            <div style={{flex: 1, marginRight: '20px'}}>
-                <DroppableArea formElements={formElements} onDelete={handleDeleteElement}
-                               onSelect={handleSelectElement}/>
-            </div>
-            {selectedElement && (<div ref={editSidebarRef}>
-                <EditSidebar
-                    className="edit-sidebar"
-                    selectedElement={selectedElement}
-                    onNameChange={(newName) => {
-                        handleNameChange(selectedElement.id, newName);
-                        setSelectedElement((prev) => ({...prev, name: newName}));
-                    }}
-                />
-            </div>)}
-        </div>
-        <div style={{textAlign: 'center', marginTop: '20px'}}>
-            <button
-                onClick={() => setShowPreview(!showPreview)}
+    return (
+        <DndContext onDragEnd={handleDrop}>
+            <div
                 style={{
-                    padding: '15px 30px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '20px',
+                    padding: '40px',
+                    marginTop: '20px',
+                    fontFamily: 'Arial, sans-serif',
                 }}
             >
-                {showPreview ? 'Close Preview' : 'Preview Form'}
-            </button>
-        </div>
-        {showPreview && (<FormPreview formElements={formElements} onClose={() => setShowPreview(false)}/>)}
-    </DndContext>);
+                <Sidebar />
+                <div style={{ flex: 1, marginRight: '20px' }}>
+                    <DroppableArea
+                        formElements={formElements}
+                        onDelete={handleDeleteElement}
+                        onSelect={handleSelectElement}
+                    />
+                </div>
+                {selectedElement && (
+                    <div ref={editSidebarRef}>
+                        <EditSidebar
+                            className="edit-sidebar"
+                            selectedElement={selectedElement}
+                            onNameChange={(newName) => {
+                                handleNameChange(selectedElement.id, newName);
+                                setSelectedElement((prev) => ({ ...prev, name: newName }));
+                            }}
+                        />
+                    </div>
+                )}
+            </div>
+            <button onClick={() => setIsPreviewOpen(true)} style={{ margin: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}>Preview Form</button>
+            {isPreviewOpen && (
+                <FormPreview formElements={formElements} onClose={() => setIsPreviewOpen(false)} />
+            )}
+        </DndContext>
+    );
 }
 
 export default App;
