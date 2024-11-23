@@ -1,6 +1,7 @@
 import React from 'react';
 import {useDroppable} from '@dnd-kit/core';
 import ColumnRow from './ColumnRow';
+import {Rating} from "@mui/material";
 
 function DroppableArea({formElements, onDelete, onSelect}) {
     const {isOver, setNodeRef} = useDroppable({
@@ -186,6 +187,10 @@ function renderElement(element) {
                         border: '1px solid #ccc',
                     }}
                 />
+            );
+        case 'rating':
+            return (
+                <Rating name="half-rating" defaultValue={2.5} precision={0.5} />
             );
         case 'slider':
             return (

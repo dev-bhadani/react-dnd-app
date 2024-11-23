@@ -1,7 +1,7 @@
 import React from 'react';
-import { useDroppable } from '@dnd-kit/core';
+import {useDroppable} from '@dnd-kit/core';
 
-function ColumnRow({ element, onDelete, onSelect }) {
+function ColumnRow({element, onDelete, onSelect}) {
     const columns = element.type === 'twoColumnRow' ? 2 : element.type === 'threeColumnRow' ? 3 : 4;
 
     const columnContainerStyle = {
@@ -16,8 +16,7 @@ function ColumnRow({ element, onDelete, onSelect }) {
         backgroundColor: '#ffffff',
     };
 
-    return (
-        <div style={{ marginBottom: '20px', position: 'relative' }}>
+    return (<div style={{marginBottom: '20px', position: 'relative'}}>
             <button
                 onClick={() => onDelete(element.id)}
                 style={{
@@ -37,21 +36,18 @@ function ColumnRow({ element, onDelete, onSelect }) {
                 &times;
             </button>
             <div style={columnContainerStyle}>
-                {[...Array(columns)].map((_, index) => (
-                    <DroppableColumn
+                {[...Array(columns)].map((_, index) => (<DroppableColumn
                         key={index}
                         columnId={`${element.id}-column-${index}`}
                         elements={element.columns[index] || []}
                         onSelect={onSelect}
-                    />
-                ))}
+                    />))}
             </div>
-        </div>
-    );
+        </div>);
 }
 
-function DroppableColumn({ columnId, elements, onSelect }) {
-    const { isOver, setNodeRef } = useDroppable({
+function DroppableColumn({columnId, elements, onSelect}) {
+    const {isOver, setNodeRef} = useDroppable({
         id: columnId,
     });
 
@@ -64,13 +60,8 @@ function DroppableColumn({ columnId, elements, onSelect }) {
         backgroundColor: '#ffffff',
     };
 
-    return (
-        <div ref={setNodeRef} style={style}>
-            {elements.length === 0 ? (
-                <div>Drop here</div>
-            ) : (
-                elements.map((el) => (
-                    <div
+    return (<div ref={setNodeRef} style={style}>
+            {elements.length === 0 ? (<div>Drop here</div>) : (elements.map((el) => (<div
                         key={el.id}
                         style={{
                             padding: '10px',
@@ -82,11 +73,8 @@ function DroppableColumn({ columnId, elements, onSelect }) {
                         onClick={() => onSelect(el.id)}
                     >
                         {el.type}
-                    </div>
-                ))
-            )}
-        </div>
-    );
+                    </div>)))}
+        </div>);
 }
 
 export default ColumnRow;

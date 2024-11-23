@@ -15,6 +15,7 @@ const items = [
     { id: 'radio', label: 'Radio Button', icon: <RadioButtonCheckedIcon /> },
     { id: 'select', label: 'Dropdown Select', icon: <ArrowDropDownCircleIcon /> },
     { id: 'date', label: 'Date Picker', icon: <EventIcon /> },
+    {id : 'rating', label: 'Rating', icon: <TuneIcon />},
     { id: 'slider', label: 'Slider', icon: <TuneIcon /> },
     { id: 'button', label: 'Button', icon: <SmartButtonIcon /> },
     { id: 'twoColumnRow', label: 'Two Column Row', icon: <ViewColumnIcon /> },
