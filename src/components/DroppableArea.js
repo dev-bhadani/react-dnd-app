@@ -1,7 +1,7 @@
 import React from 'react';
 import {useDroppable} from '@dnd-kit/core';
 import ColumnRow from './ColumnRow';
-import {Rating} from "@mui/material";
+import {Button, Checkbox, FormControlLabel, Rating} from "@mui/material";
 
 function DroppableArea({formElements, onDelete, onSelect}) {
     const {isOver, setNodeRef} = useDroppable({
@@ -131,32 +131,43 @@ function renderElement(element) {
                 />
             );
         case 'checkbox':
-            return <input type="checkbox" style={{marginLeft: '10px', transform: 'scale(1.2)'}}/>;
-        case 'radio':
             return (
-                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-                    <label>
-                        <input type="radio" name={element.id}/> Option 1
-                    </label>
-                    <label>
-                        <input type="radio" name={element.id}/> Option 2
-                    </label>
-                </div>
+                <>
+                    {element.checkboxOptions.map((option, index) => (
+                        <FormControlLabel
+                            key={index}
+                            control={
+                                <Checkbox
+                                    checked={option.checked}
+                                    disabled={option.disabled}
+                                    color={element.color}
+                                />
+                            }
+                            label={option.label}
+                        />
+                    ))}
+                </>
             );
         case 'button':
             return (
-                <button
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                    }}
+                <Button
+                    variant={element.variant}
+                    color={element.color}
+                    disabled={element.disabled || false}
+                    href={element.href || null}
                 >
-                    {element.name || 'Button'}
-                </button>
+                    {element.label || 'Button'}
+                </Button>
+            );
+        case 'radio':
+            return (
+                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                    {element.options.map((option, index) => (
+                        <label key={index}>
+                            <input type="radio" name={element.id}/> {option}
+                        </label>
+                    ))}
+                </div>
             );
         case 'select':
             return (
@@ -170,9 +181,9 @@ function renderElement(element) {
                         fontSize: '16px',
                     }}
                 >
-                    <option>Select an option</option>
-                    <option>Option 1</option>
-                    <option>Option 2</option>
+                    {element.options.map((option, index) => (
+                        <option key={index}>{option}</option>
+                    ))}
                 </select>
             );
         case 'date':
@@ -190,7 +201,7 @@ function renderElement(element) {
             );
         case 'rating':
             return (
-                <Rating name="half-rating" defaultValue={2.5} precision={0.5} />
+                <Rating name="half-rating" defaultValue={2.5} precision={0.5}/>
             );
         case 'slider':
             return (
