@@ -1,6 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Button, Checkbox, FormControlLabel, Radio, RadioGroup, Select, MenuItem, TextField, Rating } from '@mui/material';
+import { Scrollbars } from 'react-custom-scrollbars-2';
 
 function FormPreview({ formElements, onClose }) {
+    // States for keeping track of interactive form elements
+    const [radioValues, setRadioValues] = useState({});
+    const [checkboxValues, setCheckboxValues] = useState({});
+    const [selectValues, setSelectValues] = useState({});
+    const [ratingValues, setRatingValues] = useState({});
+
+    const handleCheckboxChange = (elementId, index) => {
+        setCheckboxValues((prev) => ({
+            ...prev,
+            [elementId]: {
+                ...prev[elementId],
+                [index]: !prev[elementId]?.[index],
+            },
+        }));
+    };
+
+    const handleRadioChange = (elementId, value) => {
+        setRadioValues((prev) => ({
+            ...prev,
+            [elementId]: value,
+        }));
+    };
+
+    const handleSelectChange = (elementId, value) => {
+        setSelectValues((prev) => ({
+            ...prev,
+            [elementId]: value,
+        }));
+    };
+
+    const handleRatingChange = (elementId, value) => {
+        setRatingValues((prev) => ({
+            ...prev,
+            [elementId]: value,
+        }));
+    };
+
     const style = {
         position: 'fixed',
         top: '50%',
@@ -31,69 +70,42 @@ function FormPreview({ formElements, onClose }) {
             <div style={overlayStyle} onClick={onClose} />
             <div style={style}>
                 <h3 style={{ textAlign: 'center', fontWeight: 'bold', color: '#333' }}>Form Preview</h3>
-                <div>
-                    {formElements.map((element) => {
-                        if (element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow') {
+                <Scrollbars
+                    autoHeight
+                    autoHeightMax="70vh"
+                    autoHide
+                    autoHideTimeout={1000}
+                    autoHideDuration={200}
+                >
+                    <div>
+                        {formElements.map((element) => {
                             return (
                                 <div
                                     key={element.id}
                                     style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        gap: '10px',
-                                        marginBottom: '20px',
                                         padding: '10px',
-                                        border: '1px dashed #ccc',
-                                        borderRadius: '10px',
-                                        backgroundColor: '#f9f9f9',
+                                        borderRadius: '8px',
+                                        backgroundColor: '#fafafa',
+                                        marginBottom: '10px',
+                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
                                     }}
                                 >
-                                    {[...Array(element.columns.length)].map((_, index) => (
-                                        <div
-                                            key={index}
-                                            style={{
-                                                flex: 1,
-                                                minHeight: '100px',
-                                                border: '1px dashed #ccc',
-                                                padding: '10px',
-                                                borderRadius: '8px',
-                                            }}
-                                        >
-                                            {element.columns[index]?.map((el) => (
-                                                <div
-                                                    key={el.id}
-                                                    style={{
-                                                        padding: '10px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: '#fafafa',
-                                                        marginBottom: '10px',
-                                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                                    }}
-                                                >
-                                                    {renderPreviewElement(el)}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
+                                    {renderPreviewElement(
+                                        element,
+                                        radioValues,
+                                        checkboxValues,
+                                        selectValues,
+                                        ratingValues,
+                                        handleCheckboxChange,
+                                        handleRadioChange,
+                                        handleSelectChange,
+                                        handleRatingChange
+                                    )}
                                 </div>
                             );
-                        }
-                        return (
-                            <div
-                                key={element.id}
-                                style={{
-                                    padding: '10px',
-                                    borderRadius: '8px',
-                                    backgroundColor: '#fafafa',
-                                    marginBottom: '10px',
-                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                }}
-                            >
-                                {renderPreviewElement(element)}
-                            </div>
-                        );
-                    })}
-                </div>
+                        })}
+                    </div>
+                </Scrollbars>
                 <button
                     onClick={onClose}
                     style={{
@@ -113,7 +125,17 @@ function FormPreview({ formElements, onClose }) {
     );
 }
 
-function renderPreviewElement(element) {
+function renderPreviewElement(
+    element,
+    radioValues,
+    checkboxValues,
+    selectValues,
+    ratingValues,
+    handleCheckboxChange,
+    handleRadioChange,
+    handleSelectChange,
+    handleRatingChange
+) {
     switch (element.type) {
         case 'text':
             return (
@@ -121,47 +143,90 @@ function renderPreviewElement(element) {
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
                         {element.name || 'Text Field'}
                     </label>
-                    <input type="text" placeholder="Enter text" style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                    <TextField
+                        placeholder="Enter text"
+                        variant="outlined"
+                        fullWidth
+                    />
                 </div>
             );
         case 'checkbox':
             return (
                 <div>
-                    <input type="checkbox" />
-                    <label style={{ marginLeft: '10px' }}>{element.name || 'Checkbox'}</label>
+                    <h4 style={{ marginBottom: '10px' }}>{element.name || 'Checkbox Group'}</h4>
+                    {element.checkboxOptions.map((option, index) => (
+                        <FormControlLabel
+                            key={index}
+                            control={
+                                <Checkbox
+                                    checked={checkboxValues[element.id]?.[index] || false}
+                                    onChange={() => handleCheckboxChange(element.id, index)}
+                                    disabled={option.disabled}
+                                />
+                            }
+                            label={option.label}
+                        />
+                    ))}
                 </div>
             );
         case 'radio':
             return (
                 <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Radio Button'}</label>
-                    <div>
-                        <input type="radio" name={element.id} />
-                        <label style={{ marginLeft: '10px' }}>Option 1</label>
-                    </div>
-                    <div>
-                        <input type="radio" name={element.id} />
-                        <label style={{ marginLeft: '10px' }}>Option 2</label>
-                    </div>
+                    <h4 style={{ marginBottom: '10px' }}>{element.name || 'Radio Group'}</h4>
+                    <RadioGroup
+                        value={radioValues[element.id] || ''}
+                        onChange={(e) => handleRadioChange(element.id, e.target.value)}
+                    >
+                        {element.options.map((option, index) => (
+                            <FormControlLabel
+                                key={index}
+                                value={option}
+                                control={<Radio />}
+                                label={option}
+                            />
+                        ))}
+                    </RadioGroup>
                 </div>
             );
         case 'select':
             return (
                 <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Dropdown'}</label>
-                    <select style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }}>
-                        <option>Select an option</option>
-                        <option>Option 1</option>
-                        <option>Option 2</option>
-                    </select>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Dropdown'}
+                    </label>
+                    <Select
+                        fullWidth
+                        variant="outlined"
+                        value={selectValues[element.id] || ''}
+                        onChange={(e) => handleSelectChange(element.id, e.target.value)}
+                    >
+                        {element.options.map((option, index) => (
+                            <MenuItem key={index} value={option}>
+                                {option}
+                            </MenuItem>
+                        ))}
+                    </Select>
                 </div>
             );
         case 'date':
             return (
                 <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Date Picker'}</label>
-                    <input type="date" style={{ width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #ccc' }} />
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Date Picker'}
+                    </label>
+                    <TextField type="date" fullWidth variant="outlined" />
                 </div>
+            );
+        case 'button':
+            return (
+                <Button
+                    variant={element.variant}
+                    color={element.color}
+                    disabled={element.disabled || false}
+                    href={element.href || null}
+                >
+                    {element.label || 'Button'}
+                </Button>
             );
         case 'slider':
             return (
@@ -170,11 +235,52 @@ function renderPreviewElement(element) {
                     <input type="range" min="0" max="100" style={{ width: '100%' }} />
                 </div>
             );
-        case 'button':
+        case 'rating':
             return (
-                <button style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}>
-                    {element.name || 'Button'}
-                </button>
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Rating'}</label>
+                    <Rating
+                        value={ratingValues[element.id] || 0}
+                        precision={0.5}
+                        onChange={(e, value) => handleRatingChange(element.id, value)}
+                    />
+                </div>
+            );
+        case 'twoColumnRow':
+        case 'threeColumnRow':
+        case 'fourColumnRow':
+            const columns = element.type === 'twoColumnRow' ? 2 : element.type === 'threeColumnRow' ? 3 : 4;
+
+            return (
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                    {[...Array(columns)].map((_, index) => (
+                        <div
+                            key={index}
+                            style={{
+                                flex: 1,
+                                minHeight: '50px',
+                                border: '1px dashed #ccc',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                backgroundColor: '#f9f9f9',
+                            }}
+                        >
+                            {element.columns[index]?.map((el) =>
+                                renderPreviewElement(
+                                    el,
+                                    radioValues,
+                                    checkboxValues,
+                                    selectValues,
+                                    ratingValues,
+                                    handleCheckboxChange,
+                                    handleRadioChange,
+                                    handleSelectChange,
+                                    handleRatingChange
+                                )
+                            )}
+                        </div>
+                    ))}
+                </div>
             );
         default:
             return null;
@@ -182,3 +288,4 @@ function renderPreviewElement(element) {
 }
 
 export default FormPreview;
+
