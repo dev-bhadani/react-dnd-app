@@ -3,7 +3,6 @@ import { Button, Checkbox, FormControlLabel, Radio, RadioGroup, Select, MenuItem
 import { Scrollbars } from 'react-custom-scrollbars-2';
 
 function FormPreview({ formElements, onClose }) {
-    // States for keeping track of interactive form elements
     const [radioValues, setRadioValues] = useState({});
     const [checkboxValues, setCheckboxValues] = useState({});
     const [selectValues, setSelectValues] = useState({});

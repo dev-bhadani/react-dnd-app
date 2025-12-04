@@ -7,26 +7,19 @@ function DraggableItem({ item }) {
     });
 
     return (
-        <div
+        <button
             ref={setNodeRef}
+            type="button"
+            className="draggable-item"
             {...listeners}
             {...attributes}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '15px',
-                margin: '10px 0',
-                backgroundColor: '#ffffff',
-                borderRadius: '8px',
-                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                cursor: 'grab',
-                fontFamily: 'Arial, sans-serif',
-            }}
         >
-            {item.icon}
-            <span style={{ fontWeight: 'bold', color: '#333' }}>{item.label}</span>
-        </div>
+            <span className="draggable-item__icon" aria-hidden="true">
+                {item.icon}
+            </span>
+            <span className="draggable-item__label">{item.label}</span>
+            <span className="draggable-item__hint">drag</span>
+        </button>
     );
 }
 

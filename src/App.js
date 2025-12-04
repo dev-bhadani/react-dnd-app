@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { DndContext } from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
@@ -6,271 +5,389 @@ import EditSidebar from './components/EditSidebar';
 import DroppableArea from './components/DroppableArea';
 import FormPreview from './components/FormPreview';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import './App.css';
+
+const layoutTypes = new Set(['twoColumnRow', 'threeColumnRow', 'fourColumnRow']);
+
+const getColumnCount = (type) => {
+    if (type === 'twoColumnRow') return 2;
+    if (type === 'threeColumnRow') return 3;
+    if (type === 'fourColumnRow') return 4;
+    return 0;
+};
+
+const createElement = (type) => {
+    const element = { type, id: Date.now(), name: '' };
+
+    if (type === 'radio' || type === 'select') {
+        element.options = ['Option 1', 'Option 2'];
+    }
+
+    if (type === 'checkbox') {
+        element.checkboxOptions = [
+            { label: 'Option 1', checked: false },
+            { label: 'Option 2', checked: false },
+        ];
+    }
+
+    if (type === 'button') {
+        element.label = 'Button';
+        element.variant = 'contained';
+        element.color = 'primary';
+        element.disabled = false;
+    }
+
+    if (layoutTypes.has(type)) {
+        element.columns = Array.from({ length: getColumnCount(type) }, () => []);
+    }
+
+    return element;
+};
+
+const findElementById = (elements, id) => {
+    for (const element of elements) {
+        if (element.id === id) {
+            return element;
+        }
+
+        if (Array.isArray(element.columns)) {
+            for (const column of element.columns) {
+                if (!Array.isArray(column)) {
+                    continue;
+                }
+                const match = findElementById(column, id);
+                if (match) {
+                    return match;
+                }
+            }
+        }
+    }
+
+    return null;
+};
+
+const updateElementsById = (elements, id, updater) => {
+    let didChange = false;
+
+    const updatedElements = elements.map((element) => {
+        if (element.id === id) {
+            didChange = true;
+            return updater(element);
+        }
+
+        if (Array.isArray(element.columns) && element.columns.length > 0) {
+            let columnsChanged = false;
+            const nextColumns = element.columns.map((column) => {
+                if (!Array.isArray(column) || column.length === 0) {
+                    return column;
+                }
+                const updatedColumn = updateElementsById(column, id, updater);
+                if (updatedColumn !== column) {
+                    columnsChanged = true;
+                }
+                return updatedColumn;
+            });
+
+            if (columnsChanged) {
+                didChange = true;
+                return {
+                    ...element,
+                    columns: nextColumns,
+                };
+            }
+        }
+
+        return element;
+    });
+
+    return didChange ? updatedElements : elements;
+};
+
+const removeElementById = (elements, id) => {
+    let didChange = false;
+
+    const filtered = elements
+        .map((element) => {
+            if (element.id === id) {
+                didChange = true;
+                return null;
+            }
+
+            if (Array.isArray(element.columns) && element.columns.length > 0) {
+                const nextColumns = element.columns.map((column) => {
+                    if (!Array.isArray(column) || column.length === 0) {
+                        return column;
+                    }
+                    const result = removeElementById(column, id);
+                    if (result !== column) {
+                        didChange = true;
+                    }
+                    return result;
+                });
+
+                if (didChange) {
+                    return {
+                        ...element,
+                        columns: nextColumns,
+                    };
+                }
+            }
+
+            return element;
+        })
+        .filter(Boolean);
+
+    return didChange ? filtered : elements;
+};
 
 function App() {
     const [formElements, setFormElements] = useState([]);
+    const builderRef = useRef(null);
     const editSidebarRef = useRef(null);
-    const [selectedElement, setSelectedElement] = useState(null);
+    const [selectedElementId, setSelectedElementId] = useState(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isExportOpen, setIsExportOpen] = useState(false);
+    const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
+    const selectedElement = selectedElementId ? findElementById(formElements, selectedElementId) : null;
 
     const handleDrop = (event) => {
         const { active, over } = event;
-        if (over) {
-            const overId = over.id;
+        if (!over) return;
 
-            let newElement = {
-                type: active.id,
-                id: Date.now(),
-                name: '',
-                columns: [],
-            };
+        const newElement = createElement(active.id);
+        const overId = over.id;
 
-            // Initialize additional properties for specific elements
-            if (active.id === 'radio' || active.id === 'select') {
-                newElement.options = ['Option 1', 'Option 2'];
-            }
+        if (typeof overId === 'string' && overId.includes('column')) {
+            const [rowId, columnIndex] = overId.split('-column-');
+            const targetRowId = Number(rowId);
+            const targetColumnIndex = Number(columnIndex);
 
-            if (active.id === 'checkbox') {
-                newElement.checkboxOptions = [{ label: 'Option 1', checked: false }, { label: 'Option 2', checked: false }];
-            }
-
-            if (overId.includes('column')) {
-                const [rowId, columnIndex] = overId.split('-column-');
-                setFormElements((prev) =>
-                    prev.map((element) => {
-                        if (element.id === parseInt(rowId)) {
-                            const updatedColumns = [...element.columns];
-                            updatedColumns[columnIndex] = [...(updatedColumns[columnIndex] || []), newElement];
-                            return {
-                                ...element,
-                                columns: updatedColumns,
-                            };
-                        }
+            setFormElements((prev) => {
+                const newElements = prev.map((element) => {
+                    if (element.id !== targetRowId) {
                         return element;
-                    })
-                );
-            } else {
-                setFormElements((prev) => [...prev, newElement]);
-            }
+                    }
+                    const normalizedColumns = Array.from(
+                        { length: getColumnCount(element.type) },
+                        (_, idx) => element.columns?.[idx] || []
+                    );
+                    const updatedColumns = normalizedColumns.map((columnElements, idx) =>
+                        idx === targetColumnIndex ? [...columnElements, newElement] : columnElements
+                    );
+                    return { ...element, columns: updatedColumns };
+                });
+                setSelectedElementId(newElement.id);
+                return newElements;
+            });
+        } else {
+            setFormElements((prev) => {
+                const newElements = [...prev, newElement];
+                setSelectedElementId(newElement.id);
+                return newElements;
+            });
         }
     };
 
+    const applyElementUpdateById = (id, updater) => {
+        if (!id) return;
+        setFormElements((prev) => {
+            const updated = updateElementsById(prev, id, updater);
+            setSelectedElementId(findElementById(updated, id)?.id);
+            return updated;
+        });
+    };
+
     const handleDeleteElement = (id) => {
-        setFormElements((prev) => prev.filter((element) => element.id !== id));
+        setFormElements((prev) => {
+            const updated = removeElementById(prev, id);
+            setSelectedElementId((current) => {
+                if (!current) return null;
+                return findElementById(updated, current.id)?.id;
+            });
+            return updated;
+        });
     };
 
     const handleSelectElement = (id) => {
-        const element = formElements.find((el) => el.id === id);
-        setSelectedElement(element);
+        const normalizedId = findElementById(formElements, id)?.id || null;
+        setSelectedElementId(normalizedId);
+        if (normalizedId) {
+            setIsPropertiesPanelOpen(true);
+        }
     };
 
     const handleNameChange = (id, newName) => {
-        setFormElements((prev) =>
-            prev.map((element) => (element.id === id ? { ...element, name: newName } : element))
-        );
-        setSelectedElement((prev) => (prev && prev.id === id ? { ...prev, name: newName } : prev));
+        applyElementUpdateById(id, (element) => ({ ...element, name: newName }));
     };
 
-    const onOptionsChange = (index, newValue) => {
-        setFormElements((prev) =>
-            prev.map((element) => {
-                if (element.id === selectedElement.id) {
-                    const updatedOptions = element.options.map((option, optionIndex) =>
-                        optionIndex === index ? newValue : option
-                    );
-                    return { ...element, options: updatedOptions };
-                }
-                return element;
-            })
-        );
-
-        setSelectedElement((prev) => {
-            if (prev) {
-                const updatedOptions = prev.options.map((option, optionIndex) =>
-                    optionIndex === index ? newValue : option
-                );
-                return { ...prev, options: updatedOptions };
-            }
-            return prev;
+    const onOptionsChange = (index, value) => {
+        if (!selectedElement) return;
+        const selectedId = selectedElement.id;
+        if (value === null) {
+            applyElementUpdateById(selectedId, (element) => ({
+                ...element,
+                options: element.options.filter((_, optionIndex) => optionIndex !== index),
+            }));
+            return;
+        }
+        applyElementUpdateById(selectedId, (element) => {
+            const options = [...(element.options || [])];
+            options[index] = value;
+            return { ...element, options };
         });
     };
 
     const addOption = () => {
-        setFormElements((prev) =>
-            prev.map((element) => {
-                if (element.id === selectedElement.id) {
-                    const updatedOptions = [...element.options, `Option ${element.options.length + 1}`];
-                    return { ...element, options: updatedOptions };
-                }
-                return element;
-            })
-        );
-
-        setSelectedElement((prev) => {
-            if (prev) {
-                const updatedOptions = [...prev.options, `Option ${prev.options.length + 1}`];
-                return { ...prev, options: updatedOptions };
-            }
-            return prev;
+        if (!selectedElement) return;
+        applyElementUpdateById(selectedElement.id, (element) => {
+            const options = element.options || [];
+            return {
+                ...element,
+                options: [...options, `Option ${options.length + 1}`],
+            };
         });
     };
 
     const deleteOption = (index) => {
-        setFormElements((prev) =>
-            prev.map((element) => {
-                if (element.id === selectedElement.id) {
-                    const updatedOptions = element.options.filter((_, optionIndex) => optionIndex !== index);
-                    return { ...element, options: updatedOptions };
-                }
-                return element;
-            })
-        );
-
-        setSelectedElement((prev) => {
-            if (prev) {
-                const updatedOptions = prev.options.filter((_, optionIndex) => optionIndex !== index);
-                return { ...prev, options: updatedOptions };
-            }
-            return prev;
-        });
+        if (!selectedElement) return;
+        applyElementUpdateById(selectedElement.id, (element) => ({
+            ...element,
+            options: element.options.filter((_, optionIndex) => optionIndex !== index),
+        }));
     };
 
     const onCheckboxOptionChange = (index, key, value) => {
-        setFormElements((prev) =>
-            prev.map((element) => {
-                if (element.id === selectedElement.id) {
-                    const updatedCheckboxOptions = element.checkboxOptions.map((option, optionIndex) =>
-                        optionIndex === index ? { ...option, [key]: value } : option
-                    );
-                    return { ...element, checkboxOptions: updatedCheckboxOptions };
-                }
-                return element;
-            })
-        );
-
-        setSelectedElement((prev) => {
-            if (prev) {
-                const updatedCheckboxOptions = prev.checkboxOptions.map((option, optionIndex) =>
-                    optionIndex === index ? { ...option, [key]: value } : option
-                );
-                return { ...prev, checkboxOptions: updatedCheckboxOptions };
-            }
-            return prev;
-        });
+        if (!selectedElement) return;
+        applyElementUpdateById(selectedElement.id, (element) => ({
+            ...element,
+            checkboxOptions: element.checkboxOptions.map((option, optionIndex) =>
+                optionIndex === index ? { ...option, [key]: value } : option
+            ),
+        }));
     };
 
     const addCheckboxOption = () => {
-        setFormElements((prev) =>
-            prev.map((element) => {
-                if (element.id === selectedElement.id) {
-                    const updatedCheckboxOptions = [
-                        ...element.checkboxOptions,
-                        { label: `Option ${element.checkboxOptions.length + 1}`, checked: false },
-                    ];
-                    return { ...element, checkboxOptions: updatedCheckboxOptions };
-                }
-                return element;
-            })
-        );
-
-        setSelectedElement((prev) => {
-            if (prev) {
-                const updatedCheckboxOptions = [
-                    ...prev.checkboxOptions,
-                    { label: `Option ${prev.checkboxOptions.length + 1}`, checked: false },
-                ];
-                return { ...prev, checkboxOptions: updatedCheckboxOptions };
-            }
-            return prev;
+        if (!selectedElement) return;
+        applyElementUpdateById(selectedElement.id, (element) => {
+            const checkboxOptions = element.checkboxOptions || [];
+            return {
+                ...element,
+                checkboxOptions: [
+                    ...checkboxOptions,
+                    { label: `Option ${checkboxOptions.length + 1}`, checked: false },
+                ],
+            };
         });
     };
 
     const deleteCheckboxOption = (index) => {
-        setFormElements((prev) =>
-            prev.map((element) => {
-                if (element.id === selectedElement.id) {
-                    const updatedCheckboxOptions = element.checkboxOptions.filter(
-                        (_, optionIndex) => optionIndex !== index
-                    );
-                    return { ...element, checkboxOptions: updatedCheckboxOptions };
-                }
-                return element;
-            })
-        );
+        if (!selectedElement) return;
+        applyElementUpdateById(selectedElement.id, (element) => ({
+            ...element,
+            checkboxOptions: element.checkboxOptions.filter((_, optionIndex) => optionIndex !== index),
+        }));
+    };
 
-        setSelectedElement((prev) => {
-            if (prev) {
-                const updatedCheckboxOptions = prev.checkboxOptions.filter(
-                    (_, optionIndex) => optionIndex !== index
-                );
-                return { ...prev, checkboxOptions: updatedCheckboxOptions };
-            }
-            return prev;
-        });
+    const handleButtonPropertyChange = (key, value) => {
+        if (!selectedElement) return;
+        applyElementUpdateById(selectedElement.id, (element) => ({ ...element, [key]: value }));
     };
 
     const handleExport = () => {
         setIsExportOpen(true);
     };
 
+    const handleClearCanvas = () => {
+        setFormElements([]);
+        setSelectedElementId(null);
+        setIsPropertiesPanelOpen(false);
+    };
+
+    const hasSelectedElement = Boolean(selectedElement);
+
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (editSidebarRef.current && !editSidebarRef.current.contains(event.target)) {
-                setSelectedElement(null);
+            if (!builderRef.current) {
+                return;
             }
+            if (builderRef.current.contains(event.target)) {
+                return;
+            }
+            setSelectedElementId(null);
+            setIsPropertiesPanelOpen(false);
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [selectedElement]);
+    }, []);
 
     return (
         <DndContext onDragEnd={handleDrop}>
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: '20px',
-                    padding: '40px',
-                    marginTop: '20px',
-                    fontFamily: 'Arial, sans-serif',
-                }}
-            >
+            <div ref={builderRef} className={`builder-layout ${hasSelectedElement && isPropertiesPanelOpen ? '' : 'builder-layout--no-properties'}`}>
                 <Sidebar />
-                <div style={{ flex: 1, marginRight: '20px' }}>
+
+                <section className="workspace">
+                    <header className="workspace__header">
+                        <div>
+                            <p className="workspace__eyebrow">Build mode</p>
+                            <h2 className="workspace__title">Assemble your form</h2>
+                            <p className="workspace__subtitle">
+                                Drag items from the left, drop them into the canvas, then fine-tune their properties.
+                            </p>
+                        </div>
+                        <Button
+                            variant="text"
+                            color="primary"
+                            onClick={handleClearCanvas}
+                            disabled={formElements.length === 0}
+                        >
+                            Clear canvas
+                        </Button>
+                    </header>
+
+                    {!hasSelectedElement && (
+                        <div className="properties-hint" role="status">
+                            <h3>Editing tips</h3>
+                            <p>Drop a field onto the canvas, then click it to unlock its settings panel.</p>
+                            <p className="properties-hint__tip">Double-click any element to jump straight into edit mode.</p>
+                        </div>
+                    )}
+
                     <DroppableArea
                         formElements={formElements}
                         onDelete={handleDeleteElement}
                         onSelect={handleSelectElement}
+                        selectedElementId={selectedElement?.id || null}
                     />
-                </div>
-                {selectedElement && (
-                    <div ref={editSidebarRef}>
+                </section>
+
+                {hasSelectedElement && isPropertiesPanelOpen && (
+                    <aside ref={editSidebarRef} className="properties-panel">
                         <EditSidebar
                             className="edit-sidebar"
                             selectedElement={selectedElement}
-                            onNameChange={(newName) => {
-                                handleNameChange(selectedElement.id, newName);
-                                setSelectedElement((prev) => ({ ...prev, name: newName }));
-                            }}
+                            onNameChange={(newName) => handleNameChange(selectedElement.id, newName)}
                             onOptionsChange={onOptionsChange}
                             addOption={addOption}
                             deleteOption={deleteOption}
                             onCheckboxOptionChange={onCheckboxOptionChange}
                             addCheckboxOption={addCheckboxOption}
                             deleteCheckboxOption={deleteCheckboxOption}
+                            onButtonPropertyChange={handleButtonPropertyChange}
+                            onCloseProperties={() => setIsPropertiesPanelOpen(false)}
                         />
-                    </div>
+                    </aside>
                 )}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px' }}>
+
+            <div className="action-bar">
                 <Button
                     variant="contained"
                     color="primary"
                     onClick={() => setIsPreviewOpen(true)}
+                    className="action-bar__button"
                 >
                     Preview Form
                 </Button>
@@ -278,6 +395,7 @@ function App() {
                     variant="contained"
                     color="secondary"
                     onClick={handleExport}
+                    className="action-bar__button"
                 >
                     Export Form
                 </Button>

@@ -1,77 +1,46 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {useDroppable} from '@dnd-kit/core';
 import ColumnRow from './ColumnRow';
 import {Button, Checkbox, FormControlLabel, Rating} from "@mui/material";
 
-function DroppableArea({formElements, onDelete, onSelect}) {
+function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
+    const canvasRef = useRef(null);
     const {isOver, setNodeRef} = useDroppable({
         id: 'form-canvas',
     });
 
-    const style = {
-        border: isOver ? '2px solid #4caf50' : '2px dashed #ccc',
-        borderRadius: '12px',
-        padding: '5px',
-        textAlign: 'center',
-        color: '#aaa',
-        fontSize: '18px',
-        width: '100%',
-        minHeight: '800px',
-        backgroundColor: '#fafafa',
-        boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
-        marginLeft: '10px',
-        fontFamily: 'Arial, sans-serif',
-    };
+    const setRefs = useCallback(
+        (node) => {
+            canvasRef.current = node;
+            setNodeRef(node);
+        },
+        [setNodeRef]
+    );
 
-    const elementStyle = {
-        position: 'relative',
-        marginBottom: '25px',
-        padding: '20px',
-        borderRadius: '10px',
-        backgroundColor: '#ffffff',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        width: '95%',
-        margin: '15px auto',
-        transition: 'all 0.3s ease-in-out',
-    };
+    useEffect(() => {
+        const updateWidth = () => {
+            const header = document.querySelector('.workspace__header');
+            if (header && canvasRef.current) {
+                canvasRef.current.style.width = `${header.offsetWidth}px`;
+                canvasRef.current.style.boxSizing = 'border-box';
+            }
+        };
 
-    const labelStyle = {
-        fontWeight: 'bold',
-        marginBottom: '10px',
-        textAlign: 'left',
-        display: 'block',
-        color: '#333',
-        marginLeft: '8px',
-        fontSize: '16px',
-    };
-
-    const deleteButtonStyle = {
-        position: 'absolute',
-        top: '10px',
-        right: '10px',
-        backgroundColor: 'red',
-        color: 'white',
-        border: 'none',
-        borderRadius: '50%',
-        width: '24px',
-        height: '24px',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-    };
-
-    const elementContentStyle = {
-        marginTop: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        justifyContent: 'space-between',
-    };
+        updateWidth();
+        window.addEventListener('resize', updateWidth);
+        return () => window.removeEventListener('resize', updateWidth);
+    }, []);
 
     return (
-        <div ref={setNodeRef} style={style}>
+        <div
+            ref={setRefs}
+            className={`canvas ${isOver ? 'canvas--active' : ''}`}
+        >
             {formElements.length === 0 ? (
-                <div>Dropzone</div>
+                <div className="canvas__empty">
+                    <p className="canvas__empty-title">Drop items here</p>
+                    <p className="canvas__empty-subtitle">Build your form by dragging blocks from the left sidebar.</p>
+                </div>
             ) : (
                 formElements.map((element) => {
                     if (element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow') {
@@ -81,30 +50,49 @@ function DroppableArea({formElements, onDelete, onSelect}) {
                                 element={element}
                                 onDelete={onDelete}
                                 onSelect={onSelect}
+                                selectedElementId={selectedElementId}
                             />
                         );
                     }
+
+                    const isSelected = element.id === selectedElementId;
+
                     return (
                         <div
                             key={element.id}
-                            style={elementStyle}
+                            role="button"
+                            tabIndex={0}
+                            className={`canvas-element ${isSelected ? 'canvas-element--selected' : ''}`}
                             onClick={() => onSelect(element.id)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    onSelect(element.id);
+                                }
+                            }}
                         >
-                            <label style={labelStyle}>
-                                {element.type !== 'button' && element.name}
-                            </label>
+                            <div className="canvas-element__header">
+                                <span className="canvas-element__label">
+                                    {element.type !== 'button' ? element.name || 'Untitled field' : 'Button'}
+                                </span>
+                                <span className="canvas-element__type">{element.type}</span>
+                            </div>
+
+                            <div className="canvas-element__body">
+                                {renderElement(element)}
+                            </div>
+
                             <button
+                                type="button"
+                                className="canvas-element__delete"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onDelete(element.id);
                                 }}
-                                style={deleteButtonStyle}
+                                aria-label="Remove element"
                             >
-                                &times;
+                                ×
                             </button>
-                            <div style={elementContentStyle}>
-                                {renderElement(element)}
-                            </div>
                         </div>
                     );
                 })

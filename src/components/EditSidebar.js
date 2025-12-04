@@ -1,31 +1,24 @@
 import React from 'react';
-import {TextField, Select, MenuItem, FormControl, InputLabel, Switch, FormControlLabel, Button} from '@mui/material';
+import {TextField, Select, MenuItem, FormControl, InputLabel, Button, IconButton} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 function EditSidebar({
                          selectedElement,
                          onNameChange,
                          onOptionsChange,
                          onButtonPropertyChange,
-                         onCheckboxPropertyChange,
                          onCheckboxOptionChange,
                          addCheckboxOption,
-                         deleteCheckboxOption
+                         deleteCheckboxOption,
+                         onCloseProperties
                      }) {
-    return (<div
-        style={{
-            width: '100%',
-            maxWidth: '300px',
-            padding: '40px',
-            border: '1px solid #ddd',
-            borderRadius: '10px',
-            backgroundColor: '#f9f9f9',
-            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-            boxSizing: 'border-box',
-            fontFamily: 'Arial, sans-serif',
-            marginLeft: '20px',
-        }}
-    >
-        <h3 style={{textAlign: 'center', fontWeight: 'bold', color: '#333'}}>Edit Properties</h3>
+    return (<div className="edit-sidebar__panel">
+        <div className="edit-sidebar__header">
+            <h3 className="edit-sidebar__title">Edit Properties</h3>
+            <IconButton aria-label="Close properties" size="small" onClick={onCloseProperties}>
+                <CloseIcon fontSize="small" />
+            </IconButton>
+        </div>
         <TextField
             label="Element Name"
             value={selectedElement.name}
@@ -36,37 +29,36 @@ function EditSidebar({
             placeholder="Enter element name"
         />
 
-        {selectedElement.type === 'checkbox' && (<>
-            <h4 style={{marginTop: '20px', color: '#333'}}>Checkbox Options</h4>
+        {selectedElement.type === 'checkbox' && (<section className="edit-sidebar__section">
+            <h4>Checkbox Options</h4>
             {selectedElement.checkboxOptions.map((option, index) => (
-                <div key={index} style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
+                <div key={index} className="edit-sidebar__row">
                     <TextField
                         label={`Option ${index + 1} Label`}
                         value={option.label}
                         onChange={(e) => onCheckboxOptionChange(index, 'label', e.target.value)}
                         variant="outlined"
                         fullWidth
-                        style={{marginRight: '10px'}}
                     />
                     <Button
-                        variant="contained"
-                        color="secondary"
+                        variant="text"
+                        color="error"
                         onClick={() => deleteCheckboxOption(index)}
                     >
-                        Delete
+                        Remove
                     </Button>
                 </div>))}
             <Button
-                variant="outlined"
+                variant="contained"
                 color="primary"
                 onClick={addCheckboxOption}
-                style={{marginTop: '10px'}}
+                className="edit-sidebar__add"
             >
                 Add Checkbox Option
             </Button>
-        </>)}
+        </section>)}
 
-        {selectedElement.type === 'button' && (<>
+        {selectedElement.type === 'button' && (<section className="edit-sidebar__section">
             <TextField
                 label="Button Label"
                 value={selectedElement.label}
@@ -98,37 +90,36 @@ function EditSidebar({
                     <MenuItem value="error">Error</MenuItem>
                 </Select>
             </FormControl>
-        </>)}
+        </section>)}
 
-        {selectedElement.type === 'radio' || selectedElement.type === 'select' ? (<>
-            <h4 style={{marginTop: '20px', color: '#333'}}>Options</h4>
+        {(selectedElement.type === 'radio' || selectedElement.type === 'select') && (<section className="edit-sidebar__section">
+            <h4>Options</h4>
             {selectedElement.options.map((option, index) => (
-                <div key={index} style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
+                <div key={index} className="edit-sidebar__row">
                     <TextField
                         value={option}
                         onChange={(e) => onOptionsChange(index, e.target.value)}
                         variant="outlined"
                         fullWidth
                         placeholder={`Option ${index + 1}`}
-                        style={{marginRight: '10px'}}
                     />
                     <Button
-                        variant="contained"
-                        color="secondary"
+                        variant="text"
+                        color="error"
                         onClick={() => onOptionsChange(index, null)}
                     >
-                        Delete
+                        Remove
                     </Button>
                 </div>))}
             <Button
-                variant="outlined"
+                variant="contained"
                 color="primary"
                 onClick={() => onOptionsChange(selectedElement.options.length, '')}
-                style={{marginTop: '10px'}}
+                className="edit-sidebar__add"
             >
                 Add Option
             </Button>
-        </>) : null}
+        </section>)}
     </div>);
 }
 
