@@ -325,80 +325,89 @@ function App() {
 
     return (
         <DndContext onDragEnd={handleDrop}>
-            <div ref={builderRef} className={`builder-layout ${hasSelectedElement && isPropertiesPanelOpen ? '' : 'builder-layout--no-properties'}`}>
-                <Sidebar />
-
-                <section className="workspace">
-                    <header className="workspace__header">
+            <div ref={builderRef} className="app-shell">
+                <header className="main-header">
+                    <div className="main-header__brand">
+                        <div className="main-header__logo" aria-hidden="true">FC</div>
                         <div>
-                            <p className="workspace__eyebrow">Build mode</p>
-                            <h2 className="workspace__title">Assemble your form</h2>
-                            <p className="workspace__subtitle">
-                                Drag items from the left, drop them into the canvas, then fine-tune their properties.
-                            </p>
+                            <p className="main-header__eyebrow">Form studio</p>
+                            <h1 className="main-header__heading">FormCraft</h1>
                         </div>
-                        <Button
-                            variant="text"
-                            color="primary"
-                            onClick={handleClearCanvas}
-                            disabled={formElements.length === 0}
-                        >
-                            Clear canvas
-                        </Button>
-                    </header>
+                    </div>
+                    <nav className="main-header__nav" aria-label="Primary">
+                        <button type="button" className="main-header__link main-header__link--active">Builder</button>
+                        <button type="button" className="main-header__link" onClick={() => setIsPreviewOpen(true)}>Preview</button>
+                        <button type="button" className="main-header__link" onClick={handleExport}>Export</button>
+                    </nav>
+                    <div className="main-header__actions">
+                        <Button variant="outlined" color="inherit" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
+                        <Button variant="contained" color="primary" onClick={handleExport}>Export</Button>
+                    </div>
+                </header>
 
-                    {!hasSelectedElement && (
-                        <div className="properties-hint" role="status">
-                            <h3>Editing tips</h3>
-                            <p>Drop a field onto the canvas, then click it to unlock its settings panel.</p>
-                            <p className="properties-hint__tip">Double-click any element to jump straight into edit mode.</p>
-                        </div>
-                    )}
+                <div className={`builder-layout ${hasSelectedElement && isPropertiesPanelOpen ? '' : 'builder-layout--no-properties'}`}>
+                    <Sidebar />
 
-                    <DroppableArea
-                        formElements={formElements}
-                        onDelete={handleDeleteElement}
-                        onSelect={handleSelectElement}
-                        selectedElementId={selectedElement?.id || null}
-                    />
-                </section>
+                    <section className="workspace">
+                        <header className="workspace__header">
+                            <div>
+                                <p className="workspace__eyebrow">Build mode</p>
+                                <h2 className="workspace__title">Assemble your form</h2>
+                                <p className="workspace__subtitle">
+                                    Drag items from the left, drop them into the canvas, then fine-tune their properties.
+                                </p>
+                            </div>
+                            <Button
+                                variant="text"
+                                color="primary"
+                                onClick={handleClearCanvas}
+                                disabled={formElements.length === 0}
+                            >
+                                Clear canvas
+                            </Button>
+                        </header>
 
-                {hasSelectedElement && isPropertiesPanelOpen && (
-                    <aside ref={editSidebarRef} className="properties-panel">
-                        <EditSidebar
-                            className="edit-sidebar"
-                            selectedElement={selectedElement}
-                            onNameChange={(newName) => handleNameChange(selectedElement.id, newName)}
-                            onOptionsChange={onOptionsChange}
-                            addOption={addOption}
-                            deleteOption={deleteOption}
-                            onCheckboxOptionChange={onCheckboxOptionChange}
-                            addCheckboxOption={addCheckboxOption}
-                            deleteCheckboxOption={deleteCheckboxOption}
-                            onButtonPropertyChange={handleButtonPropertyChange}
-                            onCloseProperties={() => setIsPropertiesPanelOpen(false)}
+                        {!hasSelectedElement && (
+                            <div className="properties-hint" role="status">
+                                <h3>Editing tips</h3>
+                                <p>Drop a field onto the canvas, then click it to unlock its settings panel.</p>
+                                <p className="properties-hint__tip">Double-click any element to jump straight into edit mode.</p>
+                            </div>
+                        )}
+
+                        <DroppableArea
+                            formElements={formElements}
+                            onDelete={handleDeleteElement}
+                            onSelect={handleSelectElement}
+                            selectedElementId={selectedElement?.id || null}
                         />
-                    </aside>
-                )}
-            </div>
+                    </section>
 
-            <div className="action-bar">
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => setIsPreviewOpen(true)}
-                    className="action-bar__button"
-                >
-                    Preview Form
-                </Button>
-                <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={handleExport}
-                    className="action-bar__button"
-                >
-                    Export Form
-                </Button>
+                    {hasSelectedElement && isPropertiesPanelOpen && (
+                        <aside ref={editSidebarRef} className="properties-panel">
+                            <EditSidebar
+                                className="edit-sidebar"
+                                selectedElement={selectedElement}
+                                onNameChange={(newName) => handleNameChange(selectedElement.id, newName)}
+                                onOptionsChange={onOptionsChange}
+                                addOption={addOption}
+                                deleteOption={deleteOption}
+                                onCheckboxOptionChange={onCheckboxOptionChange}
+                                addCheckboxOption={addCheckboxOption}
+                                deleteCheckboxOption={deleteCheckboxOption}
+                                onButtonPropertyChange={handleButtonPropertyChange}
+                                onCloseProperties={() => setIsPropertiesPanelOpen(false)}
+                            />
+                        </aside>
+                    )}
+                </div>
+
+                <footer className="main-footer">
+                    <div className="main-footer__content">
+                        <p className="main-footer__brand">FormCraft © {new Date().getFullYear()}</p>
+                        <p className="main-footer__motto">Design. Drag. Deploy. Build elegant forms in minutes.</p>
+                    </div>
+                </footer>
             </div>
 
             {isPreviewOpen && (
