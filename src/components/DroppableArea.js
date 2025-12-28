@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import {useDroppable} from '@dnd-kit/core';
 import ColumnRow from './ColumnRow';
-import {Button, Checkbox, FormControlLabel, Rating} from "@mui/material";
+import {Button, Checkbox, FormControlLabel, Rating, Switch, TextField} from "@mui/material";
 
 function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
     const canvasRef = useRef(null);
@@ -76,23 +76,22 @@ function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
                                     {element.type !== 'button' ? element.name || 'Untitled field' : 'Button'}
                                 </span>
                                 <span className="canvas-element__type">{element.type}</span>
+                                <button
+                                    type="button"
+                                    className="canvas-element__delete"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onDelete(element.id);
+                                    }}
+                                    aria-label="Remove element"
+                                >
+                                    ×
+                                </button>
                             </div>
 
                             <div className="canvas-element__body">
                                 {renderElement(element)}
                             </div>
-
-                            <button
-                                type="button"
-                                className="canvas-element__delete"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(element.id);
-                                }}
-                                aria-label="Remove element"
-                            >
-                                ×
-                            </button>
                         </div>
                     );
                 })
@@ -199,6 +198,54 @@ function renderElement(element) {
                     max="100"
                     style={{width: '100%', marginLeft: '10px', accentColor: '#007bff'}}
                 />
+            );
+        case 'textarea':
+            return (
+                <TextField
+                    multiline
+                    minRows={element.rows || 4}
+                    placeholder={element.placeholder || 'Long answer'}
+                    fullWidth
+                />
+            );
+        case 'number':
+            return (
+                <TextField
+                    type="number"
+                    placeholder={element.placeholder || 'Enter number'}
+                    fullWidth
+                    inputProps={{ min: element.min, max: element.max, step: element.step }}
+                />
+            );
+        case 'email':
+            return (
+                <TextField type="email" placeholder={element.placeholder || 'name@example.com'} fullWidth />
+            );
+        case 'phone':
+            return (
+                <TextField type="tel" placeholder={element.placeholder || '(555) 123-4567'} fullWidth />
+            );
+        case 'toggle':
+            return (
+                <FormControlLabel
+                    control={<Switch checked={element.checked} />}
+                    label={element.checked ? element.onLabel : element.offLabel}
+                />
+            );
+        case 'file':
+            return (
+                <TextField
+                    type="file"
+                    fullWidth
+                    inputProps={{ accept: element.accept, multiple: element.multiple }}
+                />
+            );
+        case 'divider':
+            return (
+                <div style={{ width: '100%' }}>
+                    <hr />
+                    <p style={{ marginTop: '8px', color: '#94a3b8', fontSize: '14px' }}>{element.label}</p>
+                </div>
             );
         default:
             return null;

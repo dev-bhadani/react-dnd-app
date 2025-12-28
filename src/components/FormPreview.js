@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Checkbox, FormControlLabel, Radio, RadioGroup, Select, MenuItem, TextField, Rating } from '@mui/material';
+import { Button, Checkbox, FormControlLabel, Radio, RadioGroup, Select, MenuItem, TextField, Rating, Switch } from '@mui/material';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 
 function FormPreview({ formElements, onClose }) {
@@ -7,6 +7,7 @@ function FormPreview({ formElements, onClose }) {
     const [checkboxValues, setCheckboxValues] = useState({});
     const [selectValues, setSelectValues] = useState({});
     const [ratingValues, setRatingValues] = useState({});
+    const [toggleValues, setToggleValues] = useState({});
 
     const handleCheckboxChange = (elementId, index) => {
         setCheckboxValues((prev) => ({
@@ -36,6 +37,13 @@ function FormPreview({ formElements, onClose }) {
         setRatingValues((prev) => ({
             ...prev,
             [elementId]: value,
+        }));
+    };
+
+    const handleToggleChange = (elementId) => {
+        setToggleValues((prev) => ({
+            ...prev,
+            [elementId]: !prev[elementId],
         }));
     };
 
@@ -98,7 +106,9 @@ function FormPreview({ formElements, onClose }) {
                                         handleCheckboxChange,
                                         handleRadioChange,
                                         handleSelectChange,
-                                        handleRatingChange
+                                        handleRatingChange,
+                                        handleToggleChange,
+                                        toggleValues
                                     )}
                                 </div>
                             );
@@ -133,7 +143,9 @@ function renderPreviewElement(
     handleCheckboxChange,
     handleRadioChange,
     handleSelectChange,
-    handleRatingChange
+    handleRatingChange,
+    handleToggleChange,
+    toggleValues
 ) {
     switch (element.type) {
         case 'text':
@@ -245,6 +257,65 @@ function renderPreviewElement(
                     />
                 </div>
             );
+        case 'textarea':
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Long Answer'}
+                    </label>
+                    <TextField multiline minRows={element.rows || 4} fullWidth placeholder={element.placeholder} />
+                </div>
+            );
+        case 'number':
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Number Input'}
+                    </label>
+                    <TextField type="number" fullWidth inputProps={{ min: element.min, max: element.max, step: element.step }} placeholder={element.placeholder} />
+                </div>
+            );
+        case 'email':
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Email'}
+                    </label>
+                    <TextField type="email" fullWidth placeholder={element.placeholder} />
+                </div>
+            );
+        case 'phone':
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Phone'}
+                    </label>
+                    <TextField type="tel" fullWidth placeholder={element.placeholder} />
+                </div>
+            );
+        case 'toggle':
+            return (
+                <FormControlLabel
+                    control={<Switch checked={toggleValues[element.id] ?? element.checked} onChange={() => handleToggleChange(element.id)} />}
+                    label={(toggleValues[element.id] ?? element.checked) ? element.onLabel : element.offLabel}
+                />
+            );
+        case 'file':
+            return (
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'File Upload'}
+                    </label>
+                    <input type="file" accept={element.accept} multiple={element.multiple} />
+                </div>
+            );
+        case 'divider':
+            return (
+                <div>
+                    <hr />
+                    <p style={{ fontSize: '14px', color: '#94a3b8' }}>{element.label}</p>
+                </div>
+            );
         case 'twoColumnRow':
         case 'threeColumnRow':
         case 'fourColumnRow':
@@ -274,7 +345,9 @@ function renderPreviewElement(
                                     handleCheckboxChange,
                                     handleRadioChange,
                                     handleSelectChange,
-                                    handleRatingChange
+                                    handleRatingChange,
+                                    handleToggleChange,
+                                    toggleValues
                                 )
                             )}
                         </div>

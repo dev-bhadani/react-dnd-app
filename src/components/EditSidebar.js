@@ -1,5 +1,5 @@
 import React from 'react';
-import {TextField, Select, MenuItem, FormControl, InputLabel, Button, IconButton} from '@mui/material';
+import {TextField, Select, MenuItem, FormControl, InputLabel, Button, IconButton, Switch, FormControlLabel} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 function EditSidebar({
@@ -10,6 +10,7 @@ function EditSidebar({
                          onCheckboxOptionChange,
                          addCheckboxOption,
                          deleteCheckboxOption,
+                         onElementPropertyChange,
                          onCloseProperties
                      }) {
     return (<div className="edit-sidebar__panel">
@@ -92,34 +93,158 @@ function EditSidebar({
             </FormControl>
         </section>)}
 
-        {(selectedElement.type === 'radio' || selectedElement.type === 'select') && (<section className="edit-sidebar__section">
-            <h4>Options</h4>
-            {selectedElement.options.map((option, index) => (
-                <div key={index} className="edit-sidebar__row">
+        {['textarea', 'number', 'email', 'phone', 'toggle', 'file', 'divider', 'text'].includes(selectedElement.type) && (
+            <section className="edit-sidebar__section">
+                {selectedElement.type === 'text' && (
                     <TextField
-                        value={option}
-                        onChange={(e) => onOptionsChange(index, e.target.value)}
-                        variant="outlined"
+                        label="Placeholder"
+                        value={selectedElement.placeholder || ''}
+                        onChange={(e) => onElementPropertyChange('placeholder', e.target.value)}
                         fullWidth
-                        placeholder={`Option ${index + 1}`}
+                        margin="normal"
                     />
-                    <Button
-                        variant="text"
-                        color="error"
-                        onClick={() => onOptionsChange(index, null)}
-                    >
-                        Remove
-                    </Button>
-                </div>))}
-            <Button
-                variant="contained"
-                color="primary"
-                onClick={() => onOptionsChange(selectedElement.options.length, '')}
-                className="edit-sidebar__add"
-            >
-                Add Option
-            </Button>
-        </section>)}
+                )}
+                {selectedElement.type === 'textarea' && (
+                    <>
+                        <TextField
+                            label="Placeholder"
+                            value={selectedElement.placeholder || ''}
+                            onChange={(e) => onElementPropertyChange('placeholder', e.target.value)}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <TextField
+                            label="Rows"
+                            type="number"
+                            value={selectedElement.rows || 4}
+                            onChange={(e) => onElementPropertyChange('rows', Number(e.target.value))}
+                            fullWidth
+                            margin="normal"
+                            inputProps={{ min: 2, max: 10 }}
+                        />
+                    </>
+                )}
+                {selectedElement.type === 'number' && (
+                    <>
+                        <TextField
+                            label="Placeholder"
+                            value={selectedElement.placeholder || ''}
+                            onChange={(e) => onElementPropertyChange('placeholder', e.target.value)}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <TextField
+                            label="Minimum"
+                            type="number"
+                            value={selectedElement.min ?? ''}
+                            onChange={(e) => onElementPropertyChange('min', e.target.value ? Number(e.target.value) : '')}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <TextField
+                            label="Maximum"
+                            type="number"
+                            value={selectedElement.max ?? ''}
+                            onChange={(e) => onElementPropertyChange('max', e.target.value ? Number(e.target.value) : '')}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <TextField
+                            label="Step"
+                            type="number"
+                            value={selectedElement.step ?? 1}
+                            onChange={(e) => onElementPropertyChange('step', e.target.value ? Number(e.target.value) : '')}
+                            fullWidth
+                            margin="normal"
+                        />
+                    </>
+                )}
+                {selectedElement.type === 'email' && (
+                    <TextField
+                        label="Placeholder"
+                        value={selectedElement.placeholder || ''}
+                        onChange={(e) => onElementPropertyChange('placeholder', e.target.value)}
+                        fullWidth
+                        margin="normal"
+                    />
+                )}
+                {selectedElement.type === 'phone' && (
+                    <>
+                        <TextField
+                            label="Placeholder"
+                            value={selectedElement.placeholder || ''}
+                            onChange={(e) => onElementPropertyChange('placeholder', e.target.value)}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <TextField
+                            label="Pattern (optional)"
+                            value={selectedElement.pattern || ''}
+                            onChange={(e) => onElementPropertyChange('pattern', e.target.value)}
+                            fullWidth
+                            margin="normal"
+                        />
+                    </>
+                )}
+                {selectedElement.type === 'toggle' && (
+                    <>
+                        <TextField
+                            label="On Label"
+                            value={selectedElement.onLabel || ''}
+                            onChange={(e) => onElementPropertyChange('onLabel', e.target.value)}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <TextField
+                            label="Off Label"
+                            value={selectedElement.offLabel || ''}
+                            onChange={(e) => onElementPropertyChange('offLabel', e.target.value)}
+                            fullWidth
+                            margin="normal"
+                        />
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={selectedElement.checked || false}
+                                    onChange={(_, checked) => onElementPropertyChange('checked', checked)}
+                                />
+                            }
+                            label="Default to On"
+                        />
+                    </>
+                )}
+                {selectedElement.type === 'file' && (
+                    <>
+                        <TextField
+                            label="Accept"
+                            value={selectedElement.accept || ''}
+                            onChange={(e) => onElementPropertyChange('accept', e.target.value)}
+                            helperText="Comma separated MIME types or extensions"
+                            fullWidth
+                            margin="normal"
+                        />
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    checked={selectedElement.multiple || false}
+                                    onChange={(_, checked) => onElementPropertyChange('multiple', checked)}
+                                />
+                            }
+                            label="Allow multiple files"
+                        />
+                    </>
+                )}
+                {selectedElement.type === 'divider' && (
+                    <TextField
+                        label="Divider Label"
+                        value={selectedElement.label || ''}
+                        onChange={(e) => onElementPropertyChange('label', e.target.value)}
+                        fullWidth
+                        margin="normal"
+                    />
+                )}
+            </section>
+        )}
     </div>);
 }
 
