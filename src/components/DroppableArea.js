@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {useDroppable} from '@dnd-kit/core';
 import ColumnRow from './ColumnRow';
 import {Button, Checkbox, FormControlLabel, Rating, Switch, TextField} from "@mui/material";
@@ -16,20 +16,6 @@ function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
         },
         [setNodeRef]
     );
-
-    useEffect(() => {
-        const updateWidth = () => {
-            const header = document.querySelector('.workspace__header');
-            if (header && canvasRef.current) {
-                canvasRef.current.style.width = `${header.offsetWidth}px`;
-                canvasRef.current.style.boxSizing = 'border-box';
-            }
-        };
-
-        updateWidth();
-        window.addEventListener('resize', updateWidth);
-        return () => window.removeEventListener('resize', updateWidth);
-    }, []);
 
     return (
         <div
@@ -114,6 +100,7 @@ function renderElement(element) {
                         borderRadius: '8px',
                         outline: 'none',
                         fontSize: '16px',
+                        boxSizing: 'border-box',
                     }}
                 />
             );
@@ -163,9 +150,9 @@ function renderElement(element) {
                         width: '100%',
                         padding: '12px',
                         borderRadius: '8px',
-                        marginLeft: '10px',
                         border: '1px solid #ccc',
                         fontSize: '16px',
+                        boxSizing: 'border-box',
                     }}
                 >
                     {element.options.map((option, index) => (
@@ -181,8 +168,8 @@ function renderElement(element) {
                         width: '100%',
                         padding: '12px',
                         borderRadius: '8px',
-                        marginLeft: '10px',
                         border: '1px solid #ccc',
+                        boxSizing: 'border-box',
                     }}
                 />
             );
@@ -196,7 +183,7 @@ function renderElement(element) {
                     type="range"
                     min="0"
                     max="100"
-                    style={{width: '100%', marginLeft: '10px', accentColor: '#007bff'}}
+                    style={{width: '100%', accentColor: '#007bff'}}
                 />
             );
         case 'textarea':

@@ -6,6 +6,8 @@ function EditSidebar({
                          selectedElement,
                          onNameChange,
                          onOptionsChange,
+                         addOption,
+                         deleteOption,
                          onButtonPropertyChange,
                          onCheckboxOptionChange,
                          addCheckboxOption,
@@ -56,6 +58,65 @@ function EditSidebar({
                 className="edit-sidebar__add"
             >
                 Add Checkbox Option
+            </Button>
+        </section>)}
+
+        {selectedElement.type === 'radio' && (<section className="edit-sidebar__section">
+            <h4>Radio Options</h4>
+            {selectedElement.options.map((option, index) => (
+                <div key={index} className="edit-sidebar__row">
+                    <TextField
+                        label={`Option ${index + 1} Label`}
+                        value={option}
+                        onChange={(e) => onOptionsChange(index, e.target.value)}
+                        variant="outlined"
+                        fullWidth
+                    />
+                    <Button
+                        variant="text"
+                        color="error"
+                        onClick={() => deleteOption(index)}
+                    >
+                        Remove
+                    </Button>
+                </div>))}
+            <Button
+                variant="contained"
+                color="primary"
+                onClick={addOption}
+                className="edit-sidebar__add"
+            >
+                Add Radio Option
+            </Button>
+        </section>)}
+
+        {selectedElement.type === 'select' && (<section className="edit-sidebar__section">
+            <h4>Dropdown Options</h4>
+            {(selectedElement.options || []).map((option, index) => (
+                <div key={index} className="edit-sidebar__row">
+                    <TextField
+                        label={`Option ${index + 1} Label`}
+                        value={option}
+                        onChange={(e) => onOptionsChange(index, e.target.value)}
+                        variant="outlined"
+                        fullWidth
+                    />
+                    <Button
+                        variant="text"
+                        color="error"
+                        onClick={() => deleteOption(index)}
+                    >
+                        Remove
+                    </Button>
+                </div>
+            ))}
+            <Button
+                variant="contained"
+                color="primary"
+                onClick={addOption}
+                className="edit-sidebar__add"
+            >
+                Add Dropdown Option
             </Button>
         </section>)}
 
