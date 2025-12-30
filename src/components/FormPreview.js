@@ -329,26 +329,28 @@ function renderPreviewElement(
                             style={{
                                 flex: 1,
                                 minHeight: '50px',
-                                border: '1px dashed #ccc',
-                                padding: '10px',
-                                borderRadius: '8px',
-                                backgroundColor: '#f9f9f9',
+                                border: '1px dashed #e2e8f0',
+                                padding: '12px',
+                                borderRadius: '10px',
+                                backgroundColor: '#ffffff',
                             }}
                         >
                             {element.columns[index]?.map((el) =>
-                                renderPreviewElement(
-                                    el,
-                                    radioValues,
-                                    checkboxValues,
-                                    selectValues,
-                                    ratingValues,
-                                    handleCheckboxChange,
-                                    handleRadioChange,
-                                    handleSelectChange,
-                                    handleRatingChange,
-                                    handleToggleChange,
-                                    toggleValues
-                                )
+                                <div key={el.id} style={{ marginBottom: '12px' }}>
+                                    {renderPreviewElement(
+                                        el,
+                                        radioValues,
+                                        checkboxValues,
+                                        selectValues,
+                                        ratingValues,
+                                        handleCheckboxChange,
+                                        handleRadioChange,
+                                        handleSelectChange,
+                                        handleRatingChange,
+                                        handleToggleChange,
+                                        toggleValues
+                                    )}
+                                </div>
                             )}
                         </div>
                     ))}

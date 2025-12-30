@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import EditSidebar from './components/EditSidebar';
 import DroppableArea from './components/DroppableArea';
 import FormPreview from './components/FormPreview';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, DialogContentText } from '@mui/material';
 import './App.css';
 
 const layoutTypes = new Set(['twoColumnRow', 'threeColumnRow', 'fourColumnRow']);
@@ -179,9 +179,13 @@ function App() {
     const [formElements, setFormElements] = useState([]);
     const builderRef = useRef(null);
     const editSidebarRef = useRef(null);
+    const importFileInputRef = useRef(null);
     const [selectedElementId, setSelectedElementId] = useState(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isExportOpen, setIsExportOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
+    const [importText, setImportText] = useState('');
+    const [importError, setImportError] = useState('');
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
     const selectedElement = selectedElementId ? findElementById(formElements, selectedElementId) : null;
 
@@ -337,6 +341,85 @@ function App() {
         setIsExportOpen(true);
     };
 
+    const normalizeImportedElements = (elements) => {
+        const normalize = (element) => {
+            if (layoutTypes.has(element.type)) {
+                const columns = Array.from({ length: getColumnCount(element.type) }, (_, idx) => {
+                    const existing = element.columns?.[idx];
+                    if (Array.isArray(existing)) {
+                        return existing.map(normalize);
+                    }
+                    return [];
+                });
+                return { ...element, columns };
+            }
+            return element;
+        };
+
+        return elements.map((el) => normalize(el));
+    };
+
+    const loadImportedElements = (jsonText) => {
+        const parsed = JSON.parse(jsonText || '[]');
+        if (!Array.isArray(parsed)) {
+            throw new Error('Root JSON must be an array of elements');
+        }
+        const normalized = normalizeImportedElements(parsed);
+        setFormElements(normalized);
+        setSelectedElementId(null);
+        setIsPropertiesPanelOpen(false);
+    };
+
+    const handleImport = () => {
+        setImportError('');
+        setImportText(JSON.stringify(formElements, null, 2) || '[]');
+        setIsImportOpen(true);
+    };
+
+    const handleImportSubmit = () => {
+        try {
+            loadImportedElements(importText);
+            setIsImportOpen(false);
+            setImportError('');
+        } catch (error) {
+            setImportError(error.message || 'Invalid JSON. Please check the format.');
+        }
+    };
+
+    const handleImportFileChange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const text = typeof e.target?.result === 'string' ? e.target.result : '';
+                setImportText(text);
+                loadImportedElements(text);
+                setIsImportOpen(false);
+                setImportError('');
+            } catch (error) {
+                setImportError(error.message || 'Invalid JSON. Please check the format.');
+            } finally {
+                if (event.target) {
+                    event.target.value = '';
+                }
+            }
+        };
+
+        reader.onerror = () => {
+            setImportError('Failed to read the file. Please try again.');
+            if (event.target) {
+                event.target.value = '';
+            }
+        };
+
+        reader.readAsText(file);
+    };
+
     const handleClearCanvas = () => {
         setFormElements([]);
         setSelectedElementId(null);
@@ -374,14 +457,28 @@ function App() {
                             <h1 className="main-header__heading">FormCraft</h1>
                         </div>
                     </div>
-                    <nav className="main-header__nav" aria-label="Primary">
-                        <button type="button" className="main-header__link main-header__link--active">Builder</button>
-                        <button type="button" className="main-header__link" onClick={() => setIsPreviewOpen(true)}>Preview</button>
-                        <button type="button" className="main-header__link" onClick={handleExport}>Export</button>
-                    </nav>
                     <div className="main-header__actions">
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            onClick={handleClearCanvas}
+                            disabled={formElements.length === 0}
+                            sx={{
+                                '&.MuiButton-outlined': {
+                                    borderColor: 'rgba(255,255,255,0.6)'
+                                },
+                                '&.Mui-disabled': {
+                                    color: '#e2e8f0',
+                                    borderColor: 'rgba(255,255,255,0.35)',
+                                    opacity: 1,
+                                },
+                            }}
+                        >
+                            Clear
+                        </Button>
+                        <Button variant="outlined" color="inherit" onClick={handleImport}>Import</Button>
                         <Button variant="outlined" color="inherit" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
-                        <Button variant="contained" color="primary" onClick={handleExport}>Export</Button>
+                        <Button variant="contained" color="primary" className="export-button" onClick={handleExport}>Export</Button>
                     </div>
                 </header>
 
@@ -389,32 +486,6 @@ function App() {
                     <Sidebar />
 
                     <section className="workspace">
-                        <header className="workspace__header">
-                            <div>
-                                <p className="workspace__eyebrow">Build mode</p>
-                                <h2 className="workspace__title">Assemble your form</h2>
-                                <p className="workspace__subtitle">
-                                    Drag items from the left, drop them into the canvas, then fine-tune their properties.
-                                </p>
-                            </div>
-                            <Button
-                                variant="text"
-                                color="primary"
-                                onClick={handleClearCanvas}
-                                disabled={formElements.length === 0}
-                            >
-                                Clear canvas
-                            </Button>
-                        </header>
-
-                        {!hasSelectedElement && (
-                            <div className="properties-hint" role="status">
-                                <h3>Editing tips</h3>
-                                <p>Drop a field onto the canvas, then click it to unlock its settings panel.</p>
-                                <p className="properties-hint__tip">Double-click any element to jump straight into edit mode.</p>
-                            </div>
-                        )}
-
                         <DroppableArea
                             formElements={formElements}
                             onDelete={handleDeleteElement}
@@ -473,6 +544,56 @@ function App() {
                     <DialogActions>
                         <Button onClick={() => setIsExportOpen(false)} color="primary">
                             Close
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {isImportOpen && (
+                <Dialog open={isImportOpen} onClose={() => setIsImportOpen(false)} fullWidth maxWidth="sm">
+                    <DialogTitle>Import Form JSON</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText sx={{ mb: 2 }}>
+                            Paste a form JSON array (from Export) to load it into the builder.
+                        </DialogContentText>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            size="small"
+                            onClick={() => importFileInputRef.current?.click()}
+                            sx={{ mb: 2 }}
+                        >
+                            Upload JSON file
+                        </Button>
+                        <input
+                            ref={importFileInputRef}
+                            type="file"
+                            accept="application/json,.json"
+                            style={{ display: 'none' }}
+                            onChange={handleImportFileChange}
+                        />
+                        <TextField
+                            multiline
+                            minRows={10}
+                            fullWidth
+                            value={importText}
+                            onChange={(e) => setImportText(e.target.value)}
+                                                        placeholder={`[
+    { "type": "text", "id": 1, "name": "My field" }
+]`}
+                        />
+                        {importError && (
+                            <DialogContentText color="error" sx={{ mt: 1 }}>
+                                {importError}
+                            </DialogContentText>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setIsImportOpen(false)} color="inherit">
+                            Cancel
+                        </Button>
+                        <Button onClick={handleImportSubmit} variant="contained" color="primary">
+                            Import
                         </Button>
                     </DialogActions>
                 </Dialog>
