@@ -165,19 +165,21 @@ function renderPreviewElement(
             return (
                 <div>
                     <h4 style={{ marginBottom: '10px' }}>{element.name || 'Checkbox Group'}</h4>
-                    {element.checkboxOptions.map((option, index) => (
-                        <FormControlLabel
-                            key={index}
-                            control={
-                                <Checkbox
-                                    checked={checkboxValues[element.id]?.[index] || false}
-                                    onChange={() => handleCheckboxChange(element.id, index)}
-                                    disabled={option.disabled}
-                                />
-                            }
-                            label={option.label}
-                        />
-                    ))}
+                    <div style={{ display: 'flex', flexDirection: element.checkboxLayout === 'horizontal' ? 'row' : 'column', gap: '8px', flexWrap: 'wrap' }}>
+                        {element.checkboxOptions.map((option, index) => (
+                            <FormControlLabel
+                                key={index}
+                                control={
+                                    <Checkbox
+                                        checked={checkboxValues[element.id]?.[index] || false}
+                                        onChange={() => handleCheckboxChange(element.id, index)}
+                                        disabled={option.disabled}
+                                    />
+                                }
+                                label={option.label}
+                            />
+                        ))}
+                    </div>
                 </div>
             );
         case 'radio':
@@ -187,6 +189,8 @@ function renderPreviewElement(
                     <RadioGroup
                         value={radioValues[element.id] || ''}
                         onChange={(e) => handleRadioChange(element.id, e.target.value)}
+                        row={element.radioLayout === 'horizontal'}
+                        sx={{ gap: element.radioLayout === 'horizontal' ? '10px' : '4px', flexWrap: 'wrap' }}
                     >
                         {element.options.map((option, index) => (
                             <FormControlLabel

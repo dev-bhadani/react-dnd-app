@@ -34,6 +34,17 @@ function EditSidebar({
 
         {selectedElement.type === 'checkbox' && (<section className="edit-sidebar__section">
             <h4>Checkbox Options</h4>
+            <FormControl fullWidth margin="dense">
+                <InputLabel>Alignment</InputLabel>
+                <Select
+                    value={selectedElement.checkboxLayout || 'vertical'}
+                    label="Alignment"
+                    onChange={(e) => onElementPropertyChange('checkboxLayout', e.target.value)}
+                >
+                    <MenuItem value="vertical">Vertical</MenuItem>
+                    <MenuItem value="horizontal">Horizontal</MenuItem>
+                </Select>
+            </FormControl>
             {selectedElement.checkboxOptions.map((option, index) => (
                 <div key={index} className="edit-sidebar__row">
                     <TextField
@@ -63,6 +74,17 @@ function EditSidebar({
 
         {selectedElement.type === 'radio' && (<section className="edit-sidebar__section">
             <h4>Radio Options</h4>
+            <FormControl fullWidth margin="dense">
+                <InputLabel>Alignment</InputLabel>
+                <Select
+                    value={selectedElement.radioLayout || 'vertical'}
+                    label="Alignment"
+                    onChange={(e) => onElementPropertyChange('radioLayout', e.target.value)}
+                >
+                    <MenuItem value="vertical">Vertical</MenuItem>
+                    <MenuItem value="horizontal">Horizontal</MenuItem>
+                </Select>
+            </FormControl>
             {selectedElement.options.map((option, index) => (
                 <div key={index} className="edit-sidebar__row">
                     <TextField

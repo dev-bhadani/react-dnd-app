@@ -23,12 +23,16 @@ const createElement = (type) => {
         case 'radio':
         case 'select':
             element.options = ['Option 1', 'Option 2'];
+            if (type === 'radio') {
+                element.radioLayout = 'vertical';
+            }
             break;
         case 'checkbox':
             element.checkboxOptions = [
                 { label: 'Option 1', checked: false },
                 { label: 'Option 2', checked: false },
             ];
+            element.checkboxLayout = 'vertical';
             break;
         case 'button':
             element.label = 'Button';
@@ -433,7 +437,13 @@ function App() {
             if (!builderRef.current) {
                 return;
             }
-            if (builderRef.current.contains(event.target)) {
+            const isInsideBuilder = builderRef.current.contains(event.target);
+            const isInsideMuiOverlay =
+                event.target.closest('.MuiPopover-root') ||
+                event.target.closest('.MuiModal-root') ||
+                event.target.closest('.MuiDialog-root');
+
+            if (isInsideBuilder || isInsideMuiOverlay) {
                 return;
             }
             setSelectedElementId(null);

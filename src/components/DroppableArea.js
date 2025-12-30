@@ -106,7 +106,7 @@ function renderElement(element) {
             );
         case 'checkbox':
             return (
-                <>
+                <div style={{ display: 'flex', flexDirection: element.checkboxLayout === 'horizontal' ? 'row' : 'column', gap: '8px', flexWrap: 'wrap' }}>
                     {element.checkboxOptions.map((option, index) => (
                         <FormControlLabel
                             key={index}
@@ -120,7 +120,7 @@ function renderElement(element) {
                             label={option.label}
                         />
                     ))}
-                </>
+                </div>
             );
         case 'button':
             return (
@@ -135,9 +135,9 @@ function renderElement(element) {
             );
         case 'radio':
             return (
-                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                <div style={{display: 'flex', flexDirection: element.radioLayout === 'horizontal' ? 'row' : 'column', alignItems: 'flex-start', gap: '10px', flexWrap: 'wrap'}}>
                     {element.options.map((option, index) => (
-                        <label key={index}>
+                        <label key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <input type="radio" name={element.id}/> {option}
                         </label>
                     ))}
