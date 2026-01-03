@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { DndContext } from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
 import EditSidebar from './components/EditSidebar';
@@ -18,6 +19,7 @@ import {
     CircularProgress,
 } from '@mui/material';
 import { listForms, getForm, createForm, updateForm, deleteForm } from './api/forms';
+import FormsPage from './pages/FormsPage';
 import './App.css';
 
 const layoutTypes = new Set(['twoColumnRow', 'threeColumnRow', 'fourColumnRow']);
@@ -257,7 +259,7 @@ const fieldsToElements = (fields) => {
     });
 };
 
-function App() {
+function BuilderApp() {
     const [formElements, setFormElements] = useState([]);
     const builderRef = useRef(null);
     const editSidebarRef = useRef(null);
@@ -278,6 +280,8 @@ function App() {
     const [isDeletingForm, setIsDeletingForm] = useState(false);
     const [apiError, setApiError] = useState('');
     const selectedElement = selectedElementId ? findElementById(formElements, selectedElementId) : null;
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const handleDrop = (event) => {
         const { active, over } = event;
@@ -444,11 +448,7 @@ function App() {
         }
     }, []);
 
-    useEffect(() => {
-        refreshFormsList();
-    }, [refreshFormsList]);
-
-    const handleLoadForm = async (id) => {
+    const handleLoadForm = useCallback(async (id) => {
         if (!id) return;
         setApiError('');
         setIsLoadingForms(true);
@@ -465,7 +465,19 @@ function App() {
             setIsLoadingForms(false);
             setIsFormsDialogOpen(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        refreshFormsList();
+    }, [refreshFormsList]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const formIdParam = params.get('formId');
+        if (formIdParam && formIdParam !== currentFormId) {
+            handleLoadForm(formIdParam);
+        }
+    }, [location.search, currentFormId, handleLoadForm]);
 
     const handleSaveForm = async () => {
         setApiError('');
@@ -503,6 +515,7 @@ function App() {
             setFormName('');
             setFormElements([]);
             setSelectedElementId(null);
+            navigate('/', { replace: true });
             await refreshFormsList();
         } catch (error) {
             setApiError(error.message || 'Failed to delete form');
@@ -596,6 +609,7 @@ function App() {
         setIsPropertiesPanelOpen(false);
         setCurrentFormId(null);
         setFormName('');
+        navigate('/', { replace: true });
     };
 
     const hasSelectedElement = Boolean(selectedElement);
@@ -644,6 +658,13 @@ function App() {
                             onChange={(e) => setFormName(e.target.value)}
                             sx={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
                         />
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            onClick={() => navigate('/forms')}
+                        >
+                            Forms
+                        </Button>
                         <Button
                             variant="contained"
                             color="primary"
@@ -852,6 +873,17 @@ function App() {
                 </Dialog>
             )}
         </DndContext>
+    );
+}
+
+function App() {
+    return (
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<BuilderApp />} />
+                <Route path="/forms" element={<FormsPage />} />
+            </Routes>
+        </BrowserRouter>
     );
 }
 
