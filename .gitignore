@@ -8,6 +8,8 @@
 *.iml
 *.xml
 out/
+.env
+.env.*
 
 # testing
 /coverage
