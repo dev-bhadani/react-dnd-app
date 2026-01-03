@@ -1,10 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DndContext } from '@dnd-kit/core';
 import Sidebar from './components/Sidebar';
 import EditSidebar from './components/EditSidebar';
 import DroppableArea from './components/DroppableArea';
 import FormPreview from './components/FormPreview';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, DialogContentText } from '@mui/material';
+import {
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    DialogContentText,
+    List,
+    ListItemButton,
+    ListItemText,
+    CircularProgress,
+} from '@mui/material';
+import { listForms, getForm, createForm, updateForm, deleteForm } from './api/forms';
 import './App.css';
 
 const layoutTypes = new Set(['twoColumnRow', 'threeColumnRow', 'fourColumnRow']);
@@ -179,6 +192,71 @@ const removeElementById = (elements, id) => {
     return didChange ? filtered : elements;
 };
 
+const elementToField = (element) => {
+    if (!element || layoutTypes.has(element.type)) {
+        return null;
+    }
+
+    const label = element.name || element.label || '';
+    const field = { type: element.type, label };
+
+    if (element.type === 'select' || element.type === 'radio') {
+        field.options = element.options || [];
+    }
+
+    if (element.type === 'checkbox') {
+        field.options = (element.checkboxOptions || []).map((opt) => opt.label);
+    }
+
+    return field;
+};
+
+const flattenElementsToFields = (elements) => {
+    const fields = [];
+
+    const walk = (nodes) => {
+        nodes.forEach((node) => {
+            if (layoutTypes.has(node.type) && Array.isArray(node.columns)) {
+                node.columns.forEach((col) => walk(col || []));
+                return;
+            }
+
+            const field = elementToField(node);
+            if (field) {
+                fields.push(field);
+            }
+        });
+    };
+
+    walk(elements || []);
+    return fields;
+};
+
+const fieldsToElements = (fields) => {
+    if (!Array.isArray(fields)) return [];
+
+    return fields.map((field, index) => {
+        const base = createElement(field.type);
+        const idSeed = Date.now() + index;
+
+        const name = field.label || field.name || '';
+        const options = Array.isArray(field.options) ? field.options : [];
+
+        if (field.type === 'select' || field.type === 'radio') {
+            return { ...base, id: idSeed, name, options: options.length ? options : base.options || [] };
+        }
+
+        if (field.type === 'checkbox') {
+            const checkboxOptions = options.length
+                ? options.map((label) => ({ label, checked: false }))
+                : base.checkboxOptions || [];
+            return { ...base, id: idSeed, name, checkboxOptions };
+        }
+
+        return { ...base, id: idSeed, name };
+    });
+};
+
 function App() {
     const [formElements, setFormElements] = useState([]);
     const builderRef = useRef(null);
@@ -191,6 +269,14 @@ function App() {
     const [importText, setImportText] = useState('');
     const [importError, setImportError] = useState('');
     const [isPropertiesPanelOpen, setIsPropertiesPanelOpen] = useState(true);
+    const [forms, setForms] = useState([]);
+    const [currentFormId, setCurrentFormId] = useState(null);
+    const [formName, setFormName] = useState('');
+    const [isFormsDialogOpen, setIsFormsDialogOpen] = useState(false);
+    const [isLoadingForms, setIsLoadingForms] = useState(false);
+    const [isSavingForm, setIsSavingForm] = useState(false);
+    const [isDeletingForm, setIsDeletingForm] = useState(false);
+    const [apiError, setApiError] = useState('');
     const selectedElement = selectedElementId ? findElementById(formElements, selectedElementId) : null;
 
     const handleDrop = (event) => {
@@ -345,6 +431,86 @@ function App() {
         setIsExportOpen(true);
     };
 
+    const refreshFormsList = useCallback(async () => {
+        setApiError('');
+        setIsLoadingForms(true);
+        try {
+            const data = await listForms();
+            setForms(Array.isArray(data) ? data : []);
+        } catch (error) {
+            setApiError(error.message || 'Failed to load forms');
+        } finally {
+            setIsLoadingForms(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        refreshFormsList();
+    }, [refreshFormsList]);
+
+    const handleLoadForm = async (id) => {
+        if (!id) return;
+        setApiError('');
+        setIsLoadingForms(true);
+        try {
+            const form = await getForm(id);
+            setCurrentFormId(form.id || id);
+            setFormName(form.name || '');
+            setFormElements(fieldsToElements(form.fields || []));
+            setSelectedElementId(null);
+            setIsPropertiesPanelOpen(false);
+        } catch (error) {
+            setApiError(error.message || 'Failed to load form');
+        } finally {
+            setIsLoadingForms(false);
+            setIsFormsDialogOpen(false);
+        }
+    };
+
+    const handleSaveForm = async () => {
+        setApiError('');
+        const payload = {
+            name: formName || 'Untitled Form',
+            fields: flattenElementsToFields(formElements),
+        };
+
+        setIsSavingForm(true);
+        try {
+            if (currentFormId) {
+                const updated = await updateForm(currentFormId, payload);
+                setCurrentFormId(updated.id || currentFormId);
+            } else {
+                const created = await createForm(payload);
+                setCurrentFormId(created.id || created._id || null);
+            }
+            await refreshFormsList();
+        } catch (error) {
+            setApiError(error.message || 'Failed to save form');
+        } finally {
+            setIsSavingForm(false);
+        }
+    };
+
+    const handleDeleteForm = async () => {
+        if (!currentFormId) return;
+        if (!window.confirm('Delete this form from the backend?')) return;
+
+        setApiError('');
+        setIsDeletingForm(true);
+        try {
+            await deleteForm(currentFormId);
+            setCurrentFormId(null);
+            setFormName('');
+            setFormElements([]);
+            setSelectedElementId(null);
+            await refreshFormsList();
+        } catch (error) {
+            setApiError(error.message || 'Failed to delete form');
+        } finally {
+            setIsDeletingForm(false);
+        }
+    };
+
     const normalizeImportedElements = (elements) => {
         const normalize = (element) => {
             if (layoutTypes.has(element.type)) {
@@ -428,6 +594,8 @@ function App() {
         setFormElements([]);
         setSelectedElementId(null);
         setIsPropertiesPanelOpen(false);
+        setCurrentFormId(null);
+        setFormName('');
     };
 
     const hasSelectedElement = Boolean(selectedElement);
@@ -468,6 +636,41 @@ function App() {
                         </div>
                     </div>
                     <div className="main-header__actions">
+                        <TextField
+                            size="small"
+                            variant="outlined"
+                            label="Form name"
+                            value={formName}
+                            onChange={(e) => setFormName(e.target.value)}
+                            sx={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
+                        />
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSaveForm}
+                            disabled={isSavingForm}
+                        >
+                            {isSavingForm ? 'Saving...' : currentFormId ? 'Update' : 'Save'}
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            onClick={() => {
+                                setIsFormsDialogOpen(true);
+                                refreshFormsList();
+                            }}
+                            disabled={isLoadingForms}
+                        >
+                            Load
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={handleDeleteForm}
+                            disabled={!currentFormId || isDeletingForm}
+                        >
+                            {isDeletingForm ? 'Deleting...' : 'Delete'}
+                        </Button>
                         <Button
                             variant="outlined"
                             color="inherit"
@@ -604,6 +807,46 @@ function App() {
                         </Button>
                         <Button onClick={handleImportSubmit} variant="contained" color="primary">
                             Import
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
+
+            {isFormsDialogOpen && (
+                <Dialog open={isFormsDialogOpen} onClose={() => setIsFormsDialogOpen(false)} fullWidth maxWidth="sm">
+                    <DialogTitle>Load a saved form</DialogTitle>
+                    <DialogContent>
+                        {isLoadingForms ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0' }}>
+                                <CircularProgress size={20} />
+                                <DialogContentText>Loading forms...</DialogContentText>
+                            </div>
+                        ) : forms.length === 0 ? (
+                            <DialogContentText>No saved forms available.</DialogContentText>
+                        ) : (
+                            <List>
+                                {forms.map((form) => (
+                                    <ListItemButton
+                                        key={form.id || form._id}
+                                        onClick={() => handleLoadForm(form.id || form._id)}
+                                    >
+                                        <ListItemText
+                                            primary={form.name || 'Untitled Form'}
+                                            secondary={form.fields?.length ? `${form.fields.length} fields` : '0 fields'}
+                                        />
+                                    </ListItemButton>
+                                ))}
+                            </List>
+                        )}
+                        {apiError && (
+                            <DialogContentText color="error" sx={{ mt: 1 }}>
+                                {apiError}
+                            </DialogContentText>
+                        )}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setIsFormsDialogOpen(false)} color="inherit">
+                            Close
                         </Button>
                     </DialogActions>
                 </Dialog>
