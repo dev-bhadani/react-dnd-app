@@ -469,7 +469,7 @@ const renderElementCode = (element, imports, level = 2) => {
     }
 };
 
-const generateReactCode = (elements, formName) => {
+const generateReactCode = (elements, formName, isTS = false) => {
     const imports = new Set(['Box']);
     const componentName = toComponentName(formName || 'Generated Form');
     const body = (elements || [])
@@ -478,46 +478,81 @@ const generateReactCode = (elements, formName) => {
         .join('\n');
 
     const importList = Array.from(imports).sort();
-    const code = `import React from 'react';\nimport { ${importList.join(', ')} } from '@mui/material';\n\nconst ${componentName} = () => (\n  <Box component="form" noValidate autoComplete="off" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>\n${
+    const reactImport = isTS ? "import React, { FC } from 'react';" : "import React from 'react';";
+    const componentSignature = isTS ? `const ${componentName}: FC = () => (` : `const ${componentName} = () => (`;
+
+    const code = `${reactImport}\nimport { ${importList.join(', ')} } from '@mui/material';\n\n${componentSignature}\n  <Box component="form" noValidate autoComplete="off" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>\n${
         body ? `${body}\n` : '    {/* Add form fields here */}\n'
     }  </Box>\n);\n\nexport default ${componentName};\n`;
 
     return { code, componentName };
 };
 
-const buildCodeSandboxParameters = ({ codeString, componentName }) => {
+const buildCodeSandboxParameters = ({ codeString, componentName, isTS = false }) => {
+    const fileExt = isTS ? 'tsx' : 'js';
+    const indexExt = isTS ? 'tsx' : 'js';
+    const pkg = {
+        name: 'formcraft-export',
+        version: '1.0.0',
+        main: `src/index.${indexExt}`,
+        dependencies: {
+            react: '^18.3.1',
+            'react-dom': '^18.3.1',
+            '@mui/material': '^6.1.6',
+            '@emotion/react': '^11.13.3',
+            '@emotion/styled': '^11.13.0',
+        },
+    };
+
+    if (isTS) {
+        pkg.devDependencies = {
+            typescript: '^5.3.3',
+            '@types/react': '^18.2.48',
+            '@types/react-dom': '^18.2.18',
+        };
+    }
+
     const files = {
         'package.json': {
+            content: JSON.stringify(pkg, null, 2),
+        },
+        'public/index.html': {
+            content: `<!DOCTYPE html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>Form Export</title>\n  </head>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>`,
+        },
+        [`src/index.${indexExt}`]: {
+            content: isTS
+                ? `import React from 'react';\nimport { createRoot } from 'react-dom/client';\nimport App from './App';\n\nconst container = document.getElementById('root') as HTMLElement;\nconst root = createRoot(container);\nroot.render(<App />);\n`
+                : `import React from 'react';\nimport { createRoot } from 'react-dom/client';\nimport App from './App';\n\nconst root = createRoot(document.getElementById('root'));\nroot.render(<App />);\n`,
+        },
+        [`src/App.${fileExt}`]: {
+            content: isTS
+                ? `import React, { FC } from 'react';\nimport GeneratedForm from './GeneratedForm';\nimport { CssBaseline, Container } from '@mui/material';\n\nconst App: FC = () => (\n  <React.Fragment>\n    <CssBaseline />\n    <Container maxWidth="md">\n      <GeneratedForm />\n    </Container>\n  </React.Fragment>\n);\n\nexport default App;\n`
+                : `import React from 'react';\nimport GeneratedForm from './GeneratedForm';\nimport { CssBaseline, Container } from '@mui/material';\n\nconst App = () => (\n  <React.Fragment>\n    <CssBaseline />\n    <Container maxWidth="md">\n      <GeneratedForm />\n    </Container>\n  </React.Fragment>\n);\n\nexport default App;\n`,
+        },
+        [`src/GeneratedForm.${fileExt}`]: {
+            content: codeString,
+        },
+    };
+
+    if (isTS) {
+        files['tsconfig.json'] = {
             content: JSON.stringify(
                 {
-                    name: 'formcraft-export',
-                    version: '1.0.0',
-                    main: 'src/index.js',
-                    dependencies: {
-                        react: '^18.3.1',
-                        'react-dom': '^18.3.1',
-                        '@mui/material': '^6.1.6',
-                        '@emotion/react': '^11.13.3',
-                        '@emotion/styled': '^11.13.0',
+                    compilerOptions: {
+                        target: 'ES2017',
+                        module: 'ESNext',
+                        jsx: 'react-jsx',
+                        moduleResolution: 'Node',
+                        esModuleInterop: true,
+                        strict: true,
+                        skipLibCheck: true,
                     },
                 },
                 null,
                 2
             ),
-        },
-        'public/index.html': {
-            content: `<!DOCTYPE html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>Form Export</title>\n  </head>\n  <body>\n    <div id="root"></div>\n  </body>\n</html>`,
-        },
-        'src/index.js': {
-            content: `import React from 'react';\nimport { createRoot } from 'react-dom/client';\nimport App from './App';\n\nconst root = createRoot(document.getElementById('root'));\nroot.render(<App />);\n`,
-        },
-        'src/App.js': {
-            content: `import React from 'react';\nimport GeneratedForm from './GeneratedForm';\nimport { CssBaseline, Container } from '@mui/material';\n\nconst App = () => (\n  <React.Fragment>\n    <CssBaseline />\n    <Container maxWidth="md">\n      <GeneratedForm />\n    </Container>\n  </React.Fragment>\n);\n\nexport default App;\n`,
-        },
-        'src/GeneratedForm.js': {
-            content: codeString,
-        },
-    };
+        };
+    }
 
     const payload = { files };
     const encoded = compressToBase64(JSON.stringify(payload))
@@ -550,6 +585,7 @@ function BuilderApp() {
     const [isCodeDialogOpen, setIsCodeDialogOpen] = useState(false);
     const [codeText, setCodeText] = useState('');
     const [codeComponentName, setCodeComponentName] = useState('GeneratedForm');
+    const [codeLanguage, setCodeLanguage] = useState('jsx');
     const [isCodeGenerating, setIsCodeGenerating] = useState(false);
     const [isSandboxing, setIsSandboxing] = useState(false);
     const [codeError, setCodeError] = useState('');
@@ -710,17 +746,35 @@ function BuilderApp() {
         setIsExportOpen(true);
     };
 
+    const generateAndSetCode = (language = codeLanguage) => {
+        const isTS = language === 'tsx';
+        const { code, componentName } = generateReactCode(formElements, formName, isTS);
+        setCodeText(code);
+        setCodeComponentName(componentName);
+    };
+
     const handleOpenCodeDialog = () => {
         setCodeError('');
         setIsCodeGenerating(true);
         try {
-            const { code, componentName } = generateReactCode(formElements, formName);
-            setCodeText(code);
-            setCodeComponentName(componentName);
+            generateAndSetCode(codeLanguage);
             setIsCodeDialogOpen(true);
         } catch (error) {
             setCodeError(error.message || 'Failed to generate code');
             setIsCodeDialogOpen(true);
+        } finally {
+            setIsCodeGenerating(false);
+        }
+    };
+
+    const handleSwitchLanguage = (language) => {
+        setCodeLanguage(language);
+        setIsCodeGenerating(true);
+        setCodeError('');
+        try {
+            generateAndSetCode(language);
+        } catch (error) {
+            setCodeError(error.message || 'Failed to generate code');
         } finally {
             setIsCodeGenerating(false);
         }
@@ -739,7 +793,11 @@ function BuilderApp() {
         if (!codeText) return;
         setIsSandboxing(true);
         try {
-            const { parameters } = buildCodeSandboxParameters({ codeString: codeText, componentName: codeComponentName });
+            const { parameters } = buildCodeSandboxParameters({
+                codeString: codeText,
+                componentName: codeComponentName,
+                isTS: codeLanguage === 'tsx',
+            });
             const url = `https://codesandbox.io/api/v1/sandboxes/define?parameters=${parameters}`;
             window.open(url, '_blank', 'noopener');
         } catch (error) {
@@ -1085,6 +1143,24 @@ function BuilderApp() {
                 <Dialog open={isCodeDialogOpen} onClose={() => setIsCodeDialogOpen(false)} fullWidth maxWidth="md">
                     <DialogTitle>Export code</DialogTitle>
                     <DialogContent>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                            <Button
+                                size="small"
+                                variant={codeLanguage === 'jsx' ? 'contained' : 'outlined'}
+                                onClick={() => handleSwitchLanguage('jsx')}
+                                disabled={isCodeGenerating}
+                            >
+                                JSX
+                            </Button>
+                            <Button
+                                size="small"
+                                variant={codeLanguage === 'tsx' ? 'contained' : 'outlined'}
+                                onClick={() => handleSwitchLanguage('tsx')}
+                                disabled={isCodeGenerating}
+                            >
+                                TSX
+                            </Button>
+                        </div>
                         {codeError && (
                             <DialogContentText color="error" sx={{ mb: 1 }}>
                                 {codeError}
@@ -1106,10 +1182,10 @@ function BuilderApp() {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCopyCode} disabled={!codeText} color="inherit">
-                            Copy
+                            Copy {codeLanguage.toUpperCase()}
                         </Button>
                         <Button onClick={handleOpenSandbox} disabled={!codeText || isSandboxing} color="inherit">
-                            {isSandboxing ? 'Opening...' : 'Open in CodeSandbox'}
+                            {isSandboxing ? 'Opening...' : `Open ${codeLanguage.toUpperCase()} in CodeSandbox`}
                         </Button>
                         <Button onClick={() => setIsCodeDialogOpen(false)} color="primary">
                             Close
