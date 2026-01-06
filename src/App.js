@@ -12,6 +12,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Tooltip,
     TextField,
     DialogContentText,
     List,
@@ -1022,77 +1023,107 @@ function BuilderApp() {
                         </div>
                     </div>
                     <div className="main-header__actions">
-                        <TextField
-                            size="small"
-                            variant="outlined"
-                            label="Form name"
-                            value={formName}
-                            onChange={(e) => setFormName(e.target.value)}
-                            sx={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
-                        />
-                        <Button
-                            variant="outlined"
-                            color="inherit"
-                            onClick={() => navigate('/forms')}
-                        >
-                            Forms
-                        </Button>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleSaveForm}
-                            disabled={isSavingForm}
-                        >
-                            {isSavingForm ? 'Saving...' : currentFormId ? 'Update' : 'Save'}
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            color="inherit"
-                            onClick={() => {
-                                setIsFormsDialogOpen(true);
-                                refreshFormsList();
-                            }}
-                            disabled={isLoadingForms}
-                        >
-                            Load
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            color="error"
-                            onClick={handleDeleteForm}
-                            disabled={!currentFormId || isDeletingForm}
-                        >
-                            {isDeletingForm ? 'Deleting...' : 'Delete'}
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            color="inherit"
-                            onClick={handleClearCanvas}
-                            disabled={formElements.length === 0}
-                            sx={{
-                                '&.MuiButton-outlined': {
-                                    borderColor: 'rgba(255,255,255,0.6)'
-                                },
-                                '&.Mui-disabled': {
-                                    color: '#e2e8f0',
-                                    borderColor: 'rgba(255,255,255,0.35)',
-                                    opacity: 1,
-                                },
-                            }}
-                        >
-                            Clear
-                        </Button>
-                        <Button
-                            variant="outlined"
-                            color="inherit"
-                            onClick={handleOpenCodeDialog}
-                            disabled={isCodeGenerating}
-                        >
-                            {isCodeGenerating ? 'Generating...' : 'Code'}
-                        </Button>
-                        <Button variant="outlined" color="inherit" onClick={handleImport}>Import</Button>
-                        <Button variant="outlined" color="inherit" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
-                        <Button variant="contained" color="primary" className="export-button" onClick={handleExport}>Export</Button>
+                        <Tooltip title="Name your form" arrow>
+                            <TextField
+                                size="small"
+                                variant="outlined"
+                                label="Form name"
+                                value={formName}
+                                onChange={(e) => setFormName(e.target.value)}
+                                sx={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
+                            />
+                        </Tooltip>
+                        <Tooltip title="Open all saved forms" arrow>
+                            <Button
+                                variant="outlined"
+                                color="inherit"
+                                onClick={() => navigate('/forms')}
+                            >
+                                Forms
+                            </Button>
+                        </Tooltip>
+                        <Tooltip title="Save or update this form" arrow>
+                            <span>
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    onClick={handleSaveForm}
+                                    disabled={isSavingForm}
+                                >
+                                    {isSavingForm ? 'Saving...' : currentFormId ? 'Update' : 'Save'}
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Load a form from history" arrow>
+                            <span>
+                                <Button
+                                    variant="outlined"
+                                    color="inherit"
+                                    onClick={() => {
+                                        setIsFormsDialogOpen(true);
+                                        refreshFormsList();
+                                    }}
+                                    disabled={isLoadingForms}
+                                >
+                                    Load
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Delete the current form" arrow>
+                            <span>
+                                <Button
+                                    variant="outlined"
+                                    color="error"
+                                    onClick={handleDeleteForm}
+                                    disabled={!currentFormId || isDeletingForm}
+                                >
+                                    {isDeletingForm ? 'Deleting...' : 'Delete'}
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Clear all fields from the canvas" arrow>
+                            <span>
+                                <Button
+                                    variant="outlined"
+                                    color="inherit"
+                                    onClick={handleClearCanvas}
+                                    disabled={formElements.length === 0}
+                                    sx={{
+                                        '&.MuiButton-outlined': {
+                                            borderColor: 'rgba(255,255,255,0.6)'
+                                        },
+                                        '&.Mui-disabled': {
+                                            color: '#e2e8f0',
+                                            borderColor: 'rgba(255,255,255,0.35)',
+                                            opacity: 1,
+                                        },
+                                    }}
+                                >
+                                    Clear
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Generate code for this form" arrow>
+                            <span>
+                                <Button
+                                    variant="outlined"
+                                    color="inherit"
+                                    onClick={handleOpenCodeDialog}
+                                    disabled={isCodeGenerating}
+                                >
+                                    {isCodeGenerating ? 'Generating...' : 'Code'}
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Import a form definition" arrow>
+                            <Button variant="outlined" color="inherit" onClick={handleImport}>Import</Button>
+                        </Tooltip>
+                        <Tooltip title="Preview the rendered form" arrow>
+                            <Button variant="outlined" color="inherit" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
+                        </Tooltip>
+                        <Tooltip title="Export this form as a file" arrow>
+                            <Button variant="contained" color="primary" className="export-button" onClick={handleExport}>Export</Button>
+                        </Tooltip>
                     </div>
                 </header>
 
@@ -1281,17 +1312,19 @@ function BuilderApp() {
                             <DialogContentText>No saved forms available.</DialogContentText>
                         ) : (
                             <List>
-                                {forms.map((form) => (
-                                    <ListItemButton
-                                        key={form.id || form._id}
-                                        onClick={() => handleLoadForm(form.id || form._id)}
-                                    >
-                                        <ListItemText
-                                            primary={form.name || 'Untitled Form'}
-                                            secondary={form.fields?.length ? `${form.fields.length} fields` : '0 fields'}
-                                        />
-                                    </ListItemButton>
-                                ))}
+                                {forms.map((form) => {
+                                    const formId = form.id || form._id;
+                                    return (
+                                        <Tooltip key={formId} title="Load this saved form" arrow placement="right">
+                                            <ListItemButton onClick={() => handleLoadForm(formId)}>
+                                                <ListItemText
+                                                    primary={form.name || 'Untitled Form'}
+                                                    secondary={form.fields?.length ? `${form.fields.length} fields` : '0 fields'}
+                                                />
+                                            </ListItemButton>
+                                        </Tooltip>
+                                    );
+                                })}
                             </List>
                         )}
                         {apiError && (

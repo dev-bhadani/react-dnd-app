@@ -27,6 +27,7 @@ import {
     Switch,
     Rating,
     Slider,
+    Tooltip,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -148,13 +149,19 @@ function FormsPage() {
                         <Typography variant="body2" color="text.secondary">Load, duplicate, or delete forms saved in the backend.</Typography>
                     </div>
                     <Stack direction="row" spacing={1}>
-                        <Button variant="outlined" onClick={refresh} startIcon={<RefreshIcon />} disabled={loading}>
-                            Refresh
-                        </Button>
-                        <Button variant="outlined" color="inherit" onClick={() => navigate('/')}>
-                            Back to Builder
-                        </Button>
-                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/')}>New Form</Button>
+                        <Tooltip title="Reload the forms list" arrow>
+                            <span>
+                                <Button variant="outlined" onClick={refresh} startIcon={<RefreshIcon />} disabled={loading}>
+                                    Refresh
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Return to the builder" arrow>
+                            <Button variant="outlined" color="inherit" onClick={() => navigate('/')}>Back to Builder</Button>
+                        </Tooltip>
+                        <Tooltip title="Start a new blank form" arrow>
+                            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/')}>New Form</Button>
+                        </Tooltip>
                     </Stack>
                 </Stack>
 
@@ -187,18 +194,28 @@ function FormsPage() {
                                     <ListItem
                                         secondaryAction={
                                             <Stack direction="row" spacing={1}>
-                                                <IconButton edge="end" aria-label="preview" onClick={() => setPreviewForm(form)}>
-                                                    <OpenInNewIcon />
-                                                </IconButton>
-                                                <IconButton edge="end" aria-label="rename" onClick={() => openRenameDialog(form)}>
-                                                    <EditIcon />
-                                                </IconButton>
-                                                <IconButton edge="end" aria-label="duplicate" onClick={() => openDuplicateDialog(form)}>
-                                                    <ContentCopyIcon />
-                                                </IconButton>
-                                                <IconButton edge="end" aria-label="delete" color="error" disabled={deleteId === id} onClick={() => handleDelete(id)}>
-                                                    <DeleteIcon />
-                                                </IconButton>
+                                                <Tooltip title="Preview this form" arrow>
+                                                    <IconButton edge="end" aria-label="preview" onClick={() => setPreviewForm(form)}>
+                                                        <OpenInNewIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Rename this form" arrow>
+                                                    <IconButton edge="end" aria-label="rename" onClick={() => openRenameDialog(form)}>
+                                                        <EditIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Duplicate this form" arrow>
+                                                    <IconButton edge="end" aria-label="duplicate" onClick={() => openDuplicateDialog(form)}>
+                                                        <ContentCopyIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Delete this form" arrow>
+                                                    <span>
+                                                        <IconButton edge="end" aria-label="delete" color="error" disabled={deleteId === id} onClick={() => handleDelete(id)}>
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
                                             </Stack>
                                         }
                                     >
