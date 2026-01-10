@@ -12,6 +12,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Collapse,
+    IconButton,
     Tooltip,
     TextField,
     DialogContentText,
@@ -20,6 +22,8 @@ import {
     ListItemText,
     CircularProgress,
 } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
 import { listForms, getForm, createForm, updateForm, deleteForm } from './api/forms';
 import FormsPage from './pages/FormsPage';
 import './App.css';
@@ -44,6 +48,17 @@ const createElement = (type) => {
                 element.radioLayout = 'vertical';
             }
             break;
+        case 'rating':
+            element.max = 5;
+            element.precision = 0.5;
+            element.defaultValue = 2.5;
+            break;
+        case 'slider':
+            element.min = 0;
+            element.max = 100;
+            element.step = 1;
+            element.defaultValue = 50;
+            break;
         case 'checkbox':
             element.checkboxOptions = [
                 { label: 'Option 1', checked: false },
@@ -56,6 +71,16 @@ const createElement = (type) => {
             element.variant = 'contained';
             element.color = 'primary';
             element.disabled = false;
+            element.size = 'medium';
+            element.fullWidth = false;
+            element.typeAttr = 'button';
+            element.href = '';
+            element.target = '_self';
+            element.startIcon = 'none';
+            element.endIcon = 'none';
+            element.borderRadius = 8;
+            element.disableElevation = false;
+            element.loading = false;
             break;
         case 'text':
             element.placeholder = 'Enter text';
@@ -204,6 +229,51 @@ const elementToField = (element) => {
     const label = element.name || element.label || '';
     const field = { type: element.type, label };
 
+    if (element.type === 'text') {
+        field.placeholder = element.placeholder || '';
+    }
+
+    if (element.type === 'phone') {
+        field.placeholder = element.placeholder || '';
+        field.pattern = element.pattern || '';
+    }
+
+    if (element.type === 'date') {
+        field.defaultDate = element.defaultDate || '';
+        field.minDate = element.minDate || '';
+        field.maxDate = element.maxDate || '';
+        field.dateFormat = element.dateFormat || '';
+    }
+
+    if (element.type === 'button') {
+        field.variant = element.variant || 'contained';
+        field.color = element.color || 'primary';
+        field.disabled = !!element.disabled;
+        field.size = element.size || 'medium';
+        field.fullWidth = !!element.fullWidth;
+        field.typeAttr = element.typeAttr || 'button';
+        field.href = element.href || '';
+        field.target = element.target || '_self';
+        field.startIcon = element.startIcon || 'none';
+        field.endIcon = element.endIcon || 'none';
+        field.borderRadius = element.borderRadius ?? 8;
+        field.disableElevation = !!element.disableElevation;
+        field.loading = !!element.loading;
+    }
+
+    if (element.type === 'rating') {
+        field.max = element.max ?? 5;
+        field.precision = element.precision ?? 0.5;
+        field.defaultValue = element.defaultValue ?? 0;
+    }
+
+    if (element.type === 'slider') {
+        field.min = element.min ?? 0;
+        field.max = element.max ?? 100;
+        field.step = element.step ?? 1;
+        field.defaultValue = element.defaultValue ?? element.min ?? 0;
+    }
+
     if (element.type === 'select' || element.type === 'radio') {
         field.options = element.options || [];
     }
@@ -257,6 +327,76 @@ const fieldsToElements = (fields) => {
             return { ...base, id: idSeed, name, checkboxOptions };
         }
 
+        if (field.type === 'text') {
+            return { ...base, id: idSeed, name, placeholder: field.placeholder ?? base.placeholder };
+        }
+
+        if (field.type === 'phone') {
+            return {
+                ...base,
+                id: idSeed,
+                name,
+                placeholder: field.placeholder ?? base.placeholder,
+                pattern: field.pattern ?? base.pattern,
+            };
+        }
+
+        if (field.type === 'date') {
+            return {
+                ...base,
+                id: idSeed,
+                name,
+                defaultDate: field.defaultDate ?? base.defaultDate,
+                minDate: field.minDate ?? base.minDate,
+                maxDate: field.maxDate ?? base.maxDate,
+                dateFormat: field.dateFormat ?? base.dateFormat,
+            };
+        }
+
+        if (field.type === 'rating') {
+            return {
+                ...base,
+                id: idSeed,
+                name,
+                max: field.max ?? base.max,
+                precision: field.precision ?? base.precision,
+                defaultValue: field.defaultValue ?? base.defaultValue,
+            };
+        }
+
+        if (field.type === 'slider') {
+            return {
+                ...base,
+                id: idSeed,
+                name,
+                min: field.min ?? base.min,
+                max: field.max ?? base.max,
+                step: field.step ?? base.step,
+                defaultValue: field.defaultValue ?? base.defaultValue ?? (field.min ?? base.min),
+            };
+        }
+
+        if (field.type === 'button') {
+            return {
+                ...base,
+                id: idSeed,
+                name,
+                variant: field.variant ?? base.variant,
+                color: field.color ?? base.color,
+                disabled: field.disabled ?? base.disabled,
+                size: field.size ?? base.size,
+                fullWidth: field.fullWidth ?? base.fullWidth,
+                typeAttr: field.typeAttr ?? base.typeAttr,
+                href: field.href ?? base.href,
+                target: field.target ?? base.target,
+                startIcon: field.startIcon ?? base.startIcon,
+                endIcon: field.endIcon ?? base.endIcon,
+                borderRadius: field.borderRadius ?? base.borderRadius,
+                disableElevation: field.disableElevation ?? base.disableElevation,
+                loading: field.loading ?? base.loading,
+            };
+        }
+
         return { ...base, id: idSeed, name };
     });
 };
@@ -282,7 +422,36 @@ const escapePropValue = (value) => {
 
 const indent = (level) => '  '.repeat(level);
 
-const renderElementCode = (element, imports, level = 2) => {
+const formatDateValue = (dateStr, format) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [yyyy, mm, dd] = parts;
+    switch (format) {
+        case 'MM/DD/YYYY':
+            return `${mm}/${dd}/${yyyy}`;
+        case 'DD/MM/YYYY':
+            return `${dd}/${mm}/${yyyy}`;
+        case 'DD.MM.YYYY':
+            return `${dd}.${mm}.${yyyy}`;
+        default:
+            return dateStr;
+    }
+};
+
+const dateFormatPattern = (format) => {
+    switch (format) {
+        case 'MM/DD/YYYY':
+        case 'DD/MM/YYYY':
+            return '^\\d{2}/\\d{2}/\\d{4}$';
+        case 'DD.MM.YYYY':
+            return '^\\d{2}\\.\\d{2}\\.\\d{4}$';
+        default:
+            return '^\\d{4}-\\d{2}-\\d{2}$';
+    }
+};
+
+const renderElementCode = (element, imports, level = 2, iconImports = new Set()) => {
     if (!element) return '';
 
     const label = escapePropValue(element.name || element.label || 'Field');
@@ -300,7 +469,7 @@ const renderElementCode = (element, imports, level = 2) => {
             const childrenCode = normalizedColumns
                 .map((col, idx) => {
                     const inner = (col || [])
-                        .map((child) => renderElementCode(child, imports, level + 2))
+                        .map((child) => renderElementCode(child, imports, level + 2, iconImports))
                         .filter(Boolean)
                         .join('\n');
                     const body = inner || `${indent(level + 3)}{/* Add a field here */}`;
@@ -346,10 +515,13 @@ const renderElementCode = (element, imports, level = 2) => {
         case 'phone':
             imports.add('TextField');
             imports.add('Box');
+            const phonePattern = element.pattern
+                ? ` inputProps={{ pattern: "${escapePropValue(element.pattern)}" }}`
+                : '';
             return wrap(
                 `${indent(level + 1)}<TextField fullWidth type="tel" label="${label || 'Phone'}" placeholder="${escapePropValue(
                     element.placeholder || '(555) 123-4567'
-                )}" />`
+                )}"${phonePattern} />`
             );
         case 'checkbox': {
             imports.add('FormGroup');
@@ -422,17 +594,49 @@ const renderElementCode = (element, imports, level = 2) => {
         case 'date':
             imports.add('TextField');
             imports.add('Box');
+            const format = element.dateFormat || 'YYYY-MM-DD';
+            const isIso = format === 'YYYY-MM-DD';
+            const minDate = isIso && element.minDate ? ` min: "${escapePropValue(element.minDate)}"` : '';
+            const maxDate = isIso && element.maxDate ? ` max: "${escapePropValue(element.maxDate)}"` : '';
+            const pattern = dateFormatPattern(format);
+            const patternProp = pattern ? ` pattern: "${pattern}"` : '';
+            const formattedMin = !isIso && element.minDate ? formatDateValue(element.minDate, format) : '';
+            const formattedMax = !isIso && element.maxDate ? formatDateValue(element.maxDate, format) : '';
+            const dataMin = formattedMin ? ` 'data-min': "${escapePropValue(formattedMin)}"` : '';
+            const dataMax = formattedMax ? ` 'data-max': "${escapePropValue(formattedMax)}"` : '';
+            const inputPropsEntries = [minDate, maxDate, patternProp, dataMin, dataMax].filter(Boolean);
+            const inputProps = inputPropsEntries.length ? ` inputProps={{${inputPropsEntries.join(', ')}}}` : '';
+            const defaultDateValue = isIso
+                ? element.defaultDate
+                : formatDateValue(element.defaultDate, format);
+            const defaultDate = defaultDateValue ? ` defaultValue="${escapePropValue(defaultDateValue)}"` : '';
+            const typeProp = isIso ? 'date' : 'text';
+            const placeholder = format ? ` placeholder="${escapePropValue(format)}"` : '';
+            const rangeHint = [
+                formattedMin ? `Min ${escapePropValue(formattedMin)}` : '',
+                formattedMax ? `Max ${escapePropValue(formattedMax)}` : '',
+            ].filter(Boolean).join(' · ');
+            const helper = rangeHint ? ` helperText="${rangeHint}"` : '';
             return wrap(
-                `${indent(level + 1)}<TextField fullWidth type="date" label="${label || 'Date'}" InputLabelProps={{ shrink: true }} />`
+                `${indent(level + 1)}<TextField fullWidth type="${typeProp}" label="${label || 'Date'}"${placeholder}${defaultDate}${inputProps}${helper} InputLabelProps={{ shrink: true }} />`
             );
         case 'rating':
             imports.add('Rating');
             imports.add('Box');
-            return wrap(`${indent(level + 1)}<Rating name="rating-${element.id}" defaultValue={2.5} precision={0.5} />`);
+            const ratingPrecision = element.precision ?? 0.5;
+            const ratingMax = element.max ?? 5;
+            const ratingDefault = element.defaultValue ?? 0;
+            return wrap(`${indent(level + 1)}<Rating name="rating-${element.id}" defaultValue={${ratingDefault}} precision={${ratingPrecision}} max={${ratingMax}} />`);
         case 'slider':
             imports.add('Slider');
             imports.add('Box');
-            return wrap(`${indent(level + 1)}<Slider defaultValue={30} aria-label="${label || 'Slider'}" />`);
+            const sliderMin = element.min ?? 0;
+            const sliderMax = element.max ?? 100;
+            const sliderStep = element.step ?? 1;
+            const sliderDefault = element.defaultValue ?? sliderMin;
+            return wrap(
+                `${indent(level + 1)}<Slider defaultValue={${sliderDefault}} min={${sliderMin}} max={${sliderMax}} step={${sliderStep}} aria-label="${label || 'Slider'}" />`
+            );
         case 'toggle':
             imports.add('FormControlLabel');
             imports.add('Switch');
@@ -460,10 +664,58 @@ const renderElementCode = (element, imports, level = 2) => {
         case 'button':
             imports.add('Button');
             imports.add('Box');
+            const buttonProps = [];
+            buttonProps.push(`variant="${element.variant || 'contained'}"`);
+            buttonProps.push(`color="${element.color || 'primary'}"`);
+            if (element.size && element.size !== 'medium') buttonProps.push(`size="${element.size}"`);
+            if (element.fullWidth) buttonProps.push('fullWidth');
+            if (element.typeAttr && element.typeAttr !== 'button') buttonProps.push(`type="${element.typeAttr}"`);
+            if (element.href) buttonProps.push(`href="${escapePropValue(element.href)}"`);
+            if (element.target) buttonProps.push(`target="${escapePropValue(element.target)}"`);
+            if (element.disableElevation) buttonProps.push('disableElevation');
+
+            const shouldDisable = element.disabled || element.loading;
+            if (element.disabled) buttonProps.push('disabled');
+
+            const radius = element.borderRadius ?? 8;
+            const sxProp = Number.isFinite(radius) ? ` sx={{ borderRadius: ${radius} }}` : '';
+
+            const iconNameMap = {
+                save: 'Save',
+                send: 'Send',
+                add: 'Add',
+                delete: 'Delete',
+                check: 'Check',
+            };
+
+            const startIconName = iconNameMap[element.startIcon];
+            const endIconName = iconNameMap[element.endIcon];
+
+            if (startIconName) iconImports.add(startIconName);
+            if (endIconName) iconImports.add(endIconName);
+            if (element.loading) {
+                imports.add('CircularProgress');
+            }
+
+            const startIconProp = element.loading
+                ? ' startIcon={<CircularProgress size={16} color="inherit" />}'
+                : startIconName
+                    ? ` startIcon={<${startIconName} fontSize="small" />}`
+                    : '';
+
+            const endIconProp = element.loading
+                ? ''
+                : endIconName
+                    ? ` endIcon={<${endIconName} fontSize="small" />}`
+                    : '';
+
+            const disabledProp = shouldDisable ? ' disabled' : '';
+            const sizeProps = buttonProps.length ? ` ${buttonProps.join(' ')}` : '';
+
             return wrap(
-                `${indent(level + 1)}<Button variant="${element.variant || 'contained'}" color="${element.color || 'primary'}" ${
-                    element.disabled ? 'disabled ' : ''
-                }>${escapePropValue(element.label || 'Button')}</Button>`
+                `${indent(level + 1)}<Button${sizeProps}${startIconProp}${endIconProp}${sxProp}${disabledProp}>${escapePropValue(
+                    element.label || 'Button'
+                )}</Button>`
             );
         default:
             return '';
@@ -472,17 +724,21 @@ const renderElementCode = (element, imports, level = 2) => {
 
 const generateReactCode = (elements, formName, isTS = false) => {
     const imports = new Set(['Box']);
+    const iconImports = new Set();
     const componentName = toComponentName(formName || 'Generated Form');
     const body = (elements || [])
-        .map((el) => renderElementCode(el, imports, 2))
+        .map((el) => renderElementCode(el, imports, 2, iconImports))
         .filter(Boolean)
         .join('\n');
 
     const importList = Array.from(imports).sort();
+    const iconImportList = Array.from(iconImports).sort();
     const reactImport = isTS ? "import React, { FC } from 'react';" : "import React from 'react';";
     const componentSignature = isTS ? `const ${componentName}: FC = () => (` : `const ${componentName} = () => (`;
 
-    const code = `${reactImport}\nimport { ${importList.join(', ')} } from '@mui/material';\n\n${componentSignature}\n  <Box component="form" noValidate autoComplete="off" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>\n${
+    const iconImportLine = iconImportList.length ? `import { ${iconImportList.join(', ')} } from '@mui/icons-material';\n` : '';
+
+    const code = `${reactImport}\nimport { ${importList.join(', ')} } from '@mui/material';\n${iconImportLine}\n${componentSignature}\n  <Box component="form" noValidate autoComplete="off" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>\n${
         body ? `${body}\n` : '    {/* Add form fields here */}\n'
     }  </Box>\n);\n\nexport default ${componentName};\n`;
 
@@ -580,6 +836,7 @@ function BuilderApp() {
     const [currentFormId, setCurrentFormId] = useState(null);
     const [formName, setFormName] = useState('');
     const [isFormsDialogOpen, setIsFormsDialogOpen] = useState(false);
+    const [isMobileActionsOpen, setIsMobileActionsOpen] = useState(false);
     const [isLoadingForms, setIsLoadingForms] = useState(false);
     const [isSavingForm, setIsSavingForm] = useState(false);
     const [isDeletingForm, setIsDeletingForm] = useState(false);
@@ -670,6 +927,11 @@ function BuilderApp() {
         applyElementUpdateById(selectedElement.id, (element) => ({ ...element, [key]: value }));
     };
 
+    const handleButtonPropertyChange = (key, value) => {
+        if (!selectedElement || selectedElement.type !== 'button') return;
+        applyElementUpdateById(selectedElement.id, (element) => ({ ...element, [key]: value }));
+    };
+
     const onOptionsChange = (index, value) => {
         if (!selectedElement) return;
         const selectedId = selectedElement.id;
@@ -736,11 +998,6 @@ function BuilderApp() {
             ...element,
             checkboxOptions: element.checkboxOptions.filter((_, optionIndex) => optionIndex !== index),
         }));
-    };
-
-    const handleButtonPropertyChange = (key, value) => {
-        if (!selectedElement) return;
-        applyElementUpdateById(selectedElement.id, (element) => ({ ...element, [key]: value }));
     };
 
     const handleExport = () => {
@@ -1011,6 +1268,112 @@ function BuilderApp() {
         };
     }, []);
 
+    const headerActions = (
+        <>
+            <Tooltip title="Name your form" arrow>
+                <TextField
+                    size="small"
+                    variant="outlined"
+                    label="Form name"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    sx={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
+                />
+            </Tooltip>
+            <Tooltip title="Open all saved forms" arrow>
+                <Button
+                    variant="outlined"
+                    color="inherit"
+                    onClick={() => navigate('/forms')}
+                >
+                    Forms
+                </Button>
+            </Tooltip>
+            <Tooltip title="Save or update this form" arrow>
+                <span>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSaveForm}
+                        disabled={isSavingForm}
+                    >
+                        {isSavingForm ? 'Saving...' : currentFormId ? 'Update' : 'Save'}
+                    </Button>
+                </span>
+            </Tooltip>
+            <Tooltip title="Load a form from history" arrow>
+                <span>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={() => {
+                            setIsFormsDialogOpen(true);
+                            refreshFormsList();
+                        }}
+                        disabled={isLoadingForms}
+                    >
+                        Load
+                    </Button>
+                </span>
+            </Tooltip>
+            <Tooltip title="Delete the current form" arrow>
+                <span>
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={handleDeleteForm}
+                        disabled={!currentFormId || isDeletingForm}
+                    >
+                        {isDeletingForm ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </span>
+            </Tooltip>
+            <Tooltip title="Clear all fields from the canvas" arrow>
+                <span>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={handleClearCanvas}
+                        disabled={formElements.length === 0}
+                        sx={{
+                            '&.MuiButton-outlined': {
+                                borderColor: 'rgba(255,255,255,0.6)'
+                            },
+                            '&.Mui-disabled': {
+                                color: '#e2e8f0',
+                                borderColor: 'rgba(255,255,255,0.35)',
+                                opacity: 1,
+                            },
+                        }}
+                    >
+                        Clear
+                    </Button>
+                </span>
+            </Tooltip>
+            <Tooltip title="Generate code for this form" arrow>
+                <span>
+                    <Button
+                        variant="outlined"
+                        color="inherit"
+                        onClick={handleOpenCodeDialog}
+                        disabled={isCodeGenerating}
+                    >
+                        {isCodeGenerating ? 'Generating...' : 'Code'}
+                    </Button>
+                </span>
+            </Tooltip>
+            <Tooltip title="Import a form definition" arrow>
+                <Button variant="outlined" color="inherit" onClick={handleImport}>Import</Button>
+            </Tooltip>
+            <Tooltip title="Preview the rendered form" arrow>
+                <Button variant="outlined" color="inherit" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
+            </Tooltip>
+            <Tooltip title="Export this form as a file" arrow>
+                <Button variant="contained" color="primary" className="export-button" onClick={handleExport}>Export</Button>
+            </Tooltip>
+        </>
+    );
+
     return (
         <DndContext onDragEnd={handleDrop}>
             <div ref={builderRef} className="app-shell">
@@ -1022,110 +1385,26 @@ function BuilderApp() {
                             <h1 className="main-header__heading">FormCraft</h1>
                         </div>
                     </div>
-                    <div className="main-header__actions">
-                        <Tooltip title="Name your form" arrow>
-                            <TextField
-                                size="small"
-                                variant="outlined"
-                                label="Form name"
-                                value={formName}
-                                onChange={(e) => setFormName(e.target.value)}
-                                sx={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '6px' }}
-                            />
-                        </Tooltip>
-                        <Tooltip title="Open all saved forms" arrow>
-                            <Button
-                                variant="outlined"
-                                color="inherit"
-                                onClick={() => navigate('/forms')}
-                            >
-                                Forms
-                            </Button>
-                        </Tooltip>
-                        <Tooltip title="Save or update this form" arrow>
-                            <span>
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={handleSaveForm}
-                                    disabled={isSavingForm}
-                                >
-                                    {isSavingForm ? 'Saving...' : currentFormId ? 'Update' : 'Save'}
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Load a form from history" arrow>
-                            <span>
-                                <Button
-                                    variant="outlined"
-                                    color="inherit"
-                                    onClick={() => {
-                                        setIsFormsDialogOpen(true);
-                                        refreshFormsList();
-                                    }}
-                                    disabled={isLoadingForms}
-                                >
-                                    Load
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Delete the current form" arrow>
-                            <span>
-                                <Button
-                                    variant="outlined"
-                                    color="error"
-                                    onClick={handleDeleteForm}
-                                    disabled={!currentFormId || isDeletingForm}
-                                >
-                                    {isDeletingForm ? 'Deleting...' : 'Delete'}
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Clear all fields from the canvas" arrow>
-                            <span>
-                                <Button
-                                    variant="outlined"
-                                    color="inherit"
-                                    onClick={handleClearCanvas}
-                                    disabled={formElements.length === 0}
-                                    sx={{
-                                        '&.MuiButton-outlined': {
-                                            borderColor: 'rgba(255,255,255,0.6)'
-                                        },
-                                        '&.Mui-disabled': {
-                                            color: '#e2e8f0',
-                                            borderColor: 'rgba(255,255,255,0.35)',
-                                            opacity: 1,
-                                        },
-                                    }}
-                                >
-                                    Clear
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Generate code for this form" arrow>
-                            <span>
-                                <Button
-                                    variant="outlined"
-                                    color="inherit"
-                                    onClick={handleOpenCodeDialog}
-                                    disabled={isCodeGenerating}
-                                >
-                                    {isCodeGenerating ? 'Generating...' : 'Code'}
-                                </Button>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Import a form definition" arrow>
-                            <Button variant="outlined" color="inherit" onClick={handleImport}>Import</Button>
-                        </Tooltip>
-                        <Tooltip title="Preview the rendered form" arrow>
-                            <Button variant="outlined" color="inherit" onClick={() => setIsPreviewOpen(true)}>Preview</Button>
-                        </Tooltip>
-                        <Tooltip title="Export this form as a file" arrow>
-                            <Button variant="contained" color="primary" className="export-button" onClick={handleExport}>Export</Button>
-                        </Tooltip>
+                    <div className="main-header__toggle">
+                        <IconButton
+                            color="inherit"
+                            aria-label="Toggle actions menu"
+                            onClick={() => setIsMobileActionsOpen((open) => !open)}
+                            className="main-header__menu-toggle"
+                            size="large"
+                        >
+                            {isMobileActionsOpen ? <CloseIcon /> : <MenuIcon />}
+                        </IconButton>
+                    </div>
+                    <div className="main-header__actions main-header__actions--desktop">
+                        {headerActions}
                     </div>
                 </header>
+                <Collapse in={isMobileActionsOpen} timeout="auto" unmountOnExit>
+                    <div className="main-header__actions main-header__actions--mobile">
+                        {headerActions}
+                    </div>
+                </Collapse>
 
                 <div className={`builder-layout ${hasSelectedElement && isPropertiesPanelOpen ? '' : 'builder-layout--no-properties'}`}>
                     <Sidebar />
@@ -1148,6 +1427,7 @@ function BuilderApp() {
                                 onOptionsChange={onOptionsChange}
                                 addOption={addOption}
                                 deleteOption={deleteOption}
+                                onButtonPropertyChange={handleButtonPropertyChange}
                                 onCheckboxOptionChange={onCheckboxOptionChange}
                                 addCheckboxOption={addCheckboxOption}
                                 deleteCheckboxOption={deleteCheckboxOption}
@@ -1160,7 +1440,7 @@ function BuilderApp() {
 
                 <footer className="main-footer">
                     <div className="main-footer__content">
-                        <p className="main-footer__brand">FormCraft © {new Date().getFullYear()}</p>
+                        <p className="main-footer__brand">FormCraft</p>
                         <p className="main-footer__motto">Design. Drag. Deploy. Build elegant forms in minutes.</p>
                     </div>
                 </footer>

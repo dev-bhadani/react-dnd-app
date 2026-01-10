@@ -6,6 +6,7 @@ import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import ArrowDropDownCircleIcon from '@mui/icons-material/ArrowDropDownCircle';
 import EventIcon from '@mui/icons-material/Event';
 import TuneIcon from '@mui/icons-material/Tune';
+import LinearScaleIcon from '@mui/icons-material/LinearScale';
 import SmartButtonIcon from '@mui/icons-material/SmartButton';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import NotesIcon from '@mui/icons-material/Notes';
@@ -28,7 +29,7 @@ const items = [
     { id: 'date', label: 'Date Picker', icon: <EventIcon /> },
     { id: 'toggle', label: 'Toggle Switch', icon: <ToggleOnIcon /> },
     { id: 'rating', label: 'Rating', icon: <TuneIcon /> },
-    { id: 'slider', label: 'Slider', icon: <TuneIcon /> },
+    { id: 'slider', label: 'Slider', icon: <LinearScaleIcon /> },
     { id: 'file', label: 'File Upload', icon: <AttachFileIcon /> },
     { id: 'divider', label: 'Divider', icon: <HorizontalRuleIcon /> },
     { id: 'button', label: 'Button', icon: <SmartButtonIcon /> },

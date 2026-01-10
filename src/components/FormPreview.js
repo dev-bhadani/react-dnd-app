@@ -1,6 +1,57 @@
 import React, { useState } from 'react';
-import { Button, Checkbox, FormControlLabel, Radio, RadioGroup, Select, MenuItem, TextField, Rating, Switch } from '@mui/material';
+import { Button, Checkbox, CircularProgress, FormControlLabel, Radio, RadioGroup, Select, MenuItem, TextField, Rating, Switch } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
+import SendIcon from '@mui/icons-material/Send';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CheckIcon from '@mui/icons-material/Check';
 import { Scrollbars } from 'react-custom-scrollbars-2';
+
+const formatDateValue = (dateStr, format) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [yyyy, mm, dd] = parts;
+    switch (format) {
+        case 'MM/DD/YYYY':
+            return `${mm}/${dd}/${yyyy}`;
+        case 'DD/MM/YYYY':
+            return `${dd}/${mm}/${yyyy}`;
+        case 'DD.MM.YYYY':
+            return `${dd}.${mm}.${yyyy}`;
+        default:
+            return dateStr;
+    }
+};
+
+const dateFormatPattern = (format) => {
+    switch (format) {
+        case 'MM/DD/YYYY':
+        case 'DD/MM/YYYY':
+            return '^\\d{2}/\\d{2}/\\d{4}$';
+        case 'DD.MM.YYYY':
+            return '^\\d{2}\\.\\d{2}\\.\\d{4}$';
+        default:
+            return '^\\d{4}-\\d{2}-\\d{2}$';
+    }
+};
+
+const iconForName = (name) => {
+    switch (name) {
+        case 'save':
+            return <SaveIcon fontSize="small" />;
+        case 'send':
+            return <SendIcon fontSize="small" />;
+        case 'add':
+            return <AddIcon fontSize="small" />;
+        case 'delete':
+            return <DeleteIcon fontSize="small" />;
+        case 'check':
+            return <CheckIcon fontSize="small" />;
+        default:
+            return null;
+    }
+};
 
 function FormPreview({ formElements, onClose }) {
     const [radioValues, setRadioValues] = useState({});
@@ -155,7 +206,7 @@ function renderPreviewElement(
                         {element.name || 'Text Field'}
                     </label>
                     <TextField
-                        placeholder="Enter text"
+                        placeholder={element.placeholder || 'Enter text'}
                         variant="outlined"
                         fullWidth
                     />
@@ -224,12 +275,38 @@ function renderPreviewElement(
                 </div>
             );
         case 'date':
+            const format = element.dateFormat || 'YYYY-MM-DD';
+            const isIso = format === 'YYYY-MM-DD';
+            const pattern = dateFormatPattern(format);
+            const formattedDefault = isIso ? element.defaultDate || '' : formatDateValue(element.defaultDate, format);
+            const formattedMin = isIso ? element.minDate || '' : formatDateValue(element.minDate, format);
+            const formattedMax = isIso ? element.maxDate || '' : formatDateValue(element.maxDate, format);
+            const rangeHint = [
+                formattedMin ? `Min ${formattedMin}` : null,
+                formattedMax ? `Max ${formattedMax}` : null,
+            ].filter(Boolean).join(' · ') || undefined;
             return (
                 <div>
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
                         {element.name || 'Date Picker'}
                     </label>
-                    <TextField type="date" fullWidth variant="outlined" />
+                    <TextField
+                        type={isIso ? 'date' : 'text'}
+                        fullWidth
+                        variant="outlined"
+                        defaultValue={formattedDefault}
+                        placeholder={format}
+                        inputProps={{
+                            min: isIso ? element.minDate || undefined : undefined,
+                            max: isIso ? element.maxDate || undefined : undefined,
+                            'data-min': !isIso && formattedMin ? formattedMin : undefined,
+                            'data-max': !isIso && formattedMax ? formattedMax : undefined,
+                            'data-format': format,
+                            pattern,
+                        }}
+                        helperText={rangeHint}
+                        InputLabelProps={{ shrink: true }}
+                    />
                 </div>
             );
         case 'button':
@@ -237,8 +314,16 @@ function renderPreviewElement(
                 <Button
                     variant={element.variant}
                     color={element.color}
-                    disabled={element.disabled || false}
+                    size={element.size || 'medium'}
+                    fullWidth={!!element.fullWidth}
+                    type={element.typeAttr || 'button'}
+                    disableElevation={!!element.disableElevation}
+                    disabled={!!element.disabled || !!element.loading}
                     href={element.href || null}
+                    target={element.target || '_self'}
+                    startIcon={element.loading ? <CircularProgress size={16} color="inherit" /> : iconForName(element.startIcon)}
+                    endIcon={element.loading ? null : iconForName(element.endIcon)}
+                    sx={{ borderRadius: element.borderRadius ?? 8 }}
                 >
                     {element.label || 'Button'}
                 </Button>
@@ -247,7 +332,15 @@ function renderPreviewElement(
             return (
                 <div>
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Slider'}</label>
-                    <input type="range" min="0" max="100" style={{ width: '100%' }} />
+                    <input
+                        type="range"
+                        min={element.min ?? 0}
+                        max={element.max ?? 100}
+                        step={element.step ?? 1}
+                        defaultValue={element.defaultValue ?? element.min ?? 0}
+                        style={{ width: '100%' }}
+                        aria-label={element.name || 'Slider'}
+                    />
                 </div>
             );
         case 'rating':
@@ -255,8 +348,9 @@ function renderPreviewElement(
                 <div>
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>{element.name || 'Rating'}</label>
                     <Rating
-                        value={ratingValues[element.id] || 0}
-                        precision={0.5}
+                        value={ratingValues[element.id] ?? element.defaultValue ?? 0}
+                        precision={element.precision ?? 0.5}
+                        max={element.max ?? 5}
                         onChange={(e, value) => handleRatingChange(element.id, value)}
                     />
                 </div>
@@ -294,15 +388,25 @@ function renderPreviewElement(
                     <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
                         {element.name || 'Phone'}
                     </label>
-                    <TextField type="tel" fullWidth placeholder={element.placeholder} />
+                    <TextField
+                        type="tel"
+                        fullWidth
+                        placeholder={element.placeholder}
+                        inputProps={{ pattern: element.pattern || undefined }}
+                    />
                 </div>
             );
         case 'toggle':
             return (
-                <FormControlLabel
-                    control={<Switch checked={toggleValues[element.id] ?? element.checked} onChange={() => handleToggleChange(element.id)} />}
-                    label={(toggleValues[element.id] ?? element.checked) ? element.onLabel : element.offLabel}
-                />
+                <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>
+                        {element.name || 'Toggle'}
+                    </label>
+                    <FormControlLabel
+                        control={<Switch checked={toggleValues[element.id] ?? element.checked} onChange={() => handleToggleChange(element.id)} />}
+                        label={(toggleValues[element.id] ?? element.checked) ? element.onLabel : element.offLabel}
+                    />
+                </div>
             );
         case 'file':
             return (
