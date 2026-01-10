@@ -221,6 +221,78 @@ const removeElementById = (elements, id) => {
     return didChange ? filtered : elements;
 };
 
+const parseColumnContainerId = (containerId) => {
+    if (!containerId || containerId === 'root') return { type: 'root' };
+    const match = String(containerId).match(/^(\d+)-column-(\d+)$/);
+    if (!match) return null;
+    return { type: 'column', rowId: Number(match[1]), columnIndex: Number(match[2]) };
+};
+
+const getContainerItems = (elements, containerId) => {
+    const parsed = parseColumnContainerId(containerId);
+    if (!parsed || parsed.type === 'root') return elements;
+    const { rowId, columnIndex } = parsed;
+    const row = elements.find((el) => el.id === rowId);
+    if (!row) return [];
+    const columns = Array.from({ length: getColumnCount(row.type) }, (_, idx) => row.columns?.[idx] || []);
+    return columns[columnIndex] || [];
+};
+
+const removeElementFromContainer = (elements, containerId, elementId) => {
+    const parsed = parseColumnContainerId(containerId);
+    if (!parsed) return { elements, removed: null };
+
+    if (parsed.type === 'root') {
+        const idx = elements.findIndex((el) => el.id === elementId);
+        if (idx === -1) return { elements, removed: null };
+        const removed = elements[idx];
+        const next = [...elements];
+        next.splice(idx, 1);
+        return { elements: next, removed };
+    }
+
+    let removed = null;
+    const { rowId, columnIndex } = parsed;
+    const next = elements.map((el) => {
+        if (el.id !== rowId) return el;
+        const columns = Array.from({ length: getColumnCount(el.type) }, (_, idx) => el.columns?.[idx] || []);
+        const columnItems = columns[columnIndex] || [];
+        const idx = columnItems.findIndex((item) => item.id === elementId);
+        if (idx === -1) return el;
+        removed = columnItems[idx];
+        const updatedColumn = [...columnItems];
+        updatedColumn.splice(idx, 1);
+        const nextColumns = columns.map((col, i) => (i === columnIndex ? updatedColumn : col));
+        return { ...el, columns: nextColumns };
+    });
+
+    return { elements: next, removed };
+};
+
+const insertElementIntoContainer = (elements, containerId, element, index) => {
+    const parsed = parseColumnContainerId(containerId);
+    if (!parsed) return elements;
+
+    if (parsed.type === 'root') {
+        const next = [...elements];
+        const targetIndex = Math.max(0, Math.min(index ?? next.length, next.length));
+        next.splice(targetIndex, 0, element);
+        return next;
+    }
+
+    const { rowId, columnIndex } = parsed;
+    return elements.map((el) => {
+        if (el.id !== rowId) return el;
+        const columns = Array.from({ length: getColumnCount(el.type) }, (_, idx) => el.columns?.[idx] || []);
+        const targetColumn = columns[columnIndex] || [];
+        const targetIndex = Math.max(0, Math.min(index ?? targetColumn.length, targetColumn.length));
+        const updatedColumn = [...targetColumn];
+        updatedColumn.splice(targetIndex, 0, element);
+        const nextColumns = columns.map((col, i) => (i === columnIndex ? updatedColumn : col));
+        return { ...el, columns: nextColumns };
+    });
+};
+
 const elementToField = (element) => {
     if (!element || layoutTypes.has(element.type)) {
         return null;
@@ -451,7 +523,7 @@ const dateFormatPattern = (format) => {
     }
 };
 
-const renderElementCode = (element, imports, level = 2, iconImports = new Set()) => {
+const renderElementCode = (element, imports, level = 2, iconImports = new Set(), gridImports = new Set()) => {
     if (!element) return '';
 
     const label = escapePropValue(element.name || element.label || 'Field');
@@ -461,7 +533,7 @@ const renderElementCode = (element, imports, level = 2, iconImports = new Set())
         case 'twoColumnRow':
         case 'threeColumnRow':
         case 'fourColumnRow': {
-            imports.add('Grid');
+            gridImports.add('Grid');
             const columnCount = getColumnCount(element.type) || 1;
             const itemSpan = Math.max(1, Math.floor(12 / columnCount));
             const normalizedColumns = Array.from({ length: columnCount }, (_, idx) => element.columns?.[idx] || []);
@@ -473,7 +545,7 @@ const renderElementCode = (element, imports, level = 2, iconImports = new Set())
                         .filter(Boolean)
                         .join('\n');
                     const body = inner || `${indent(level + 3)}{/* Add a field here */}`;
-                    return `${indent(level + 1)}<Grid item xs={12} md={${itemSpan}}>` +
+                    return `${indent(level + 1)}<Grid xs={12} md={${itemSpan}}>` +
                         `\n${body}\n${indent(level + 1)}</Grid>`;
                 })
                 .join('\n');
@@ -670,8 +742,10 @@ const renderElementCode = (element, imports, level = 2, iconImports = new Set())
             if (element.size && element.size !== 'medium') buttonProps.push(`size="${element.size}"`);
             if (element.fullWidth) buttonProps.push('fullWidth');
             if (element.typeAttr && element.typeAttr !== 'button') buttonProps.push(`type="${element.typeAttr}"`);
-            if (element.href) buttonProps.push(`href="${escapePropValue(element.href)}"`);
-            if (element.target) buttonProps.push(`target="${escapePropValue(element.target)}"`);
+            if (element.href) {
+                buttonProps.push(`href="${escapePropValue(element.href)}"`);
+                if (element.target) buttonProps.push(`target="${escapePropValue(element.target)}"`);
+            }
             if (element.disableElevation) buttonProps.push('disableElevation');
 
             const shouldDisable = element.disabled || element.loading;
@@ -725,20 +799,26 @@ const renderElementCode = (element, imports, level = 2, iconImports = new Set())
 const generateReactCode = (elements, formName, isTS = false) => {
     const imports = new Set(['Box']);
     const iconImports = new Set();
+    const gridImports = new Set();
     const componentName = toComponentName(formName || 'Generated Form');
     const body = (elements || [])
-        .map((el) => renderElementCode(el, imports, 2, iconImports))
+        .map((el) => renderElementCode(el, imports, 2, iconImports, gridImports))
         .filter(Boolean)
         .join('\n');
 
-    const importList = Array.from(imports).sort();
+    const importList = Array.from(imports).sort().filter((item) => item !== 'Grid');
     const iconImportList = Array.from(iconImports).sort();
+    const gridImportList = Array.from(gridImports).sort();
     const reactImport = isTS ? "import React, { FC } from 'react';" : "import React from 'react';";
     const componentSignature = isTS ? `const ${componentName}: FC = () => (` : `const ${componentName} = () => (`;
 
-    const iconImportLine = iconImportList.length ? `import { ${iconImportList.join(', ')} } from '@mui/icons-material';\n` : '';
+    const iconImportLine = iconImportList.length
+        ? `${iconImportList.map((name) => `import ${name} from '@mui/icons-material/${name}';`).join('\n')}\n`
+        : '';
 
-    const code = `${reactImport}\nimport { ${importList.join(', ')} } from '@mui/material';\n${iconImportLine}\n${componentSignature}\n  <Box component="form" noValidate autoComplete="off" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>\n${
+    const gridImportLine = gridImportList.length ? `import Grid from '@mui/material/Grid2';\n` : '';
+
+    const code = `${reactImport}\nimport { ${importList.join(', ')} } from '@mui/material';\n${gridImportLine}${iconImportLine}\n${componentSignature}\n  <Box component="form" noValidate autoComplete="off" sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>\n${
         body ? `${body}\n` : '    {/* Add form fields here */}\n'
     }  </Box>\n);\n\nexport default ${componentName};\n`;
 
@@ -755,7 +835,8 @@ const buildCodeSandboxParameters = ({ codeString, componentName, isTS = false })
         dependencies: {
             react: '^18.3.1',
             'react-dom': '^18.3.1',
-            '@mui/material': '^6.1.6',
+            '@mui/material': '^6.5.0',
+            '@mui/icons-material': '^6.5.0',
             '@emotion/react': '^11.13.3',
             '@emotion/styled': '^11.13.0',
         },
@@ -856,36 +937,47 @@ function BuilderApp() {
         const { active, over } = event;
         if (!over) return;
 
-        const newElement = createElement(active.id);
-        const overId = over.id;
+        const activeData = active.data?.current || {};
+        const overData = over.data?.current || {};
 
-        if (typeof overId === 'string' && overId.includes('column')) {
-            const [rowId, columnIndex] = overId.split('-column-');
-            const targetRowId = Number(rowId);
-            const targetColumnIndex = Number(columnIndex);
+        const targetContainerId = overData.containerId
+            || (typeof over.id === 'string' && over.id.includes('column') ? over.id
+                : over.id === 'form-canvas' ? 'root'
+                    : 'root');
 
+        // Palette item -> insert new element
+        if (activeData.source === 'palette') {
+            const newElement = createElement(active.id);
             setFormElements((prev) => {
-                const newElements = prev.map((element) => {
-                    if (element.id !== targetRowId) {
-                        return element;
-                    }
-                    const normalizedColumns = Array.from(
-                        { length: getColumnCount(element.type) },
-                        (_, idx) => element.columns?.[idx] || []
-                    );
-                    const updatedColumns = normalizedColumns.map((columnElements, idx) =>
-                        idx === targetColumnIndex ? [...columnElements, newElement] : columnElements
-                    );
-                    return { ...element, columns: updatedColumns };
-                });
-                setSelectedElementId(newElement.id);
-                return newElements;
+                const targetItems = getContainerItems(prev, targetContainerId);
+                const insertIndex = overData.index ?? targetItems.length;
+                const next = insertElementIntoContainer(prev, targetContainerId, newElement, insertIndex);
+                return next;
             });
-        } else {
+            setSelectedElementId(newElement.id);
+            return;
+        }
+
+        // Existing element reorder/move
+        if (activeData.source === 'canvas') {
+            const fromContainerId = activeData.containerId || 'root';
+            const activeIndex = activeData.index;
+            const targetIndexRaw = overData.index;
+
             setFormElements((prev) => {
-                const newElements = [...prev, newElement];
-                setSelectedElementId(newElement.id);
-                return newElements;
+                const { elements: withoutActive, removed } = removeElementFromContainer(prev, fromContainerId, active.id);
+                if (!removed) return prev;
+
+                let insertIndex = targetIndexRaw;
+                if (insertIndex === undefined) {
+                    const targetItems = getContainerItems(withoutActive, targetContainerId);
+                    insertIndex = targetItems.length;
+                } else if (fromContainerId === targetContainerId && activeIndex < targetIndexRaw) {
+                    insertIndex = Math.max(0, targetIndexRaw - 1);
+                }
+
+                const next = insertElementIntoContainer(withoutActive, targetContainerId, removed, insertIndex);
+                return next;
             });
         }
     };

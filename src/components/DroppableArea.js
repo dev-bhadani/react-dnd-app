@@ -1,5 +1,7 @@
 import React, { useCallback, useRef } from 'react';
 import {useDroppable} from '@dnd-kit/core';
+import {SortableContext, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
 import ColumnRow from './ColumnRow';
 import {Button, Checkbox, CircularProgress, FormControlLabel, Rating, Switch, TextField} from "@mui/material";
 import SaveIcon from '@mui/icons-material/Save';
@@ -59,6 +61,7 @@ function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
     const canvasRef = useRef(null);
     const {isOver, setNodeRef} = useDroppable({
         id: 'form-canvas',
+        data: { type: 'container', containerId: 'root' },
     });
 
     const setRefs = useCallback(
@@ -80,60 +83,87 @@ function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
                     <p className="canvas__empty-subtitle">Build your form by dragging blocks from the left sidebar.</p>
                 </div>
             ) : (
-                formElements.map((element) => {
-                    if (element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow') {
-                        return (
-                            <ColumnRow
-                                key={element.id}
-                                element={element}
-                                onDelete={onDelete}
-                                onSelect={onSelect}
-                                selectedElementId={selectedElementId}
-                            />
-                        );
-                    }
-
-                    const isSelected = element.id === selectedElementId;
-
-                    return (
-                        <div
+                <SortableContext items={formElements.map((el) => el.id)} strategy={verticalListSortingStrategy}>
+                    {formElements.map((element, index) => (
+                        <SortableCanvasElement
                             key={element.id}
-                            role="button"
-                            tabIndex={0}
-                            className={`canvas-element ${isSelected ? 'canvas-element--selected' : ''}`}
-                            onClick={() => onSelect(element.id)}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault();
-                                    onSelect(element.id);
-                                }
-                            }}
-                        >
-                            <div className="canvas-element__header">
-                                <span className="canvas-element__label">
-                                    {element.type !== 'button' ? element.name || 'Untitled field' : 'Button'}
-                                </span>
-                                <span className="canvas-element__type">{element.type}</span>
-                                <button
-                                    type="button"
-                                    className="canvas-element__delete"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onDelete(element.id);
-                                    }}
-                                    aria-label="Remove element"
-                                >
-                                    ×
-                                </button>
-                            </div>
-
-                            <div className="canvas-element__body">
-                                {renderElement(element)}
-                            </div>
-                        </div>
-                    );
-                })
+                            element={element}
+                            index={index}
+                            onDelete={onDelete}
+                            onSelect={onSelect}
+                            selectedElementId={selectedElementId}
+                        />
+                    ))}
+                </SortableContext>
             )}
+        </div>
+    );
+}
+
+function SortableCanvasElement({ element, index, onDelete, onSelect, selectedElementId }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: element.id,
+        data: { source: 'canvas', type: 'element', containerId: 'root', index },
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        cursor: 'grab',
+    };
+
+    const isSelected = element.id === selectedElementId;
+
+    const body = element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow'
+        ? <ColumnRow element={element} onDelete={onDelete} onSelect={onSelect} selectedElementId={selectedElementId} />
+        : (
+            <div className="canvas-element__body">
+                {renderElement(element)}
+            </div>
+        );
+
+    const showHeader = !(element.type === 'twoColumnRow' || element.type === 'threeColumnRow' || element.type === 'fourColumnRow');
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            role="button"
+            tabIndex={0}
+            className={`canvas-element ${isSelected ? 'canvas-element--selected' : ''}`}
+            onClick={() => onSelect(element.id)}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelect(element.id);
+                }
+            }}
+        >
+            {showHeader ? (
+                <div className="canvas-element__header">
+                    <span className="drag-handle" {...listeners} {...attributes} aria-label="Drag to reorder" role="button" />
+                    <span className="canvas-element__label">
+                        {element.type !== 'button' ? element.name || 'Untitled field' : 'Button'}
+                    </span>
+                    <span className="canvas-element__type">{element.type}</span>
+                    <button
+                        type="button"
+                        className="canvas-element__delete"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(element.id);
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        aria-label="Remove element"
+                    >
+                        ×
+                    </button>
+                </div>
+            ) : (
+                <span className="drag-handle drag-handle--row" {...listeners} {...attributes} aria-label="Drag row" role="button" />
+            )}
+            {body}
         </div>
     );
 }

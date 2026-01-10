@@ -1,5 +1,7 @@
 import React from 'react';
 import {useDroppable} from '@dnd-kit/core';
+import {SortableContext, useSortable, verticalListSortingStrategy} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
 import {Button, Checkbox, CircularProgress, FormControlLabel, Rating, Switch, TextField} from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import SendIcon from '@mui/icons-material/Send';
@@ -23,7 +25,7 @@ function ColumnRow({element, onDelete, onSelect, selectedElementId}) {
                 {[...Array(columns)].map((_, index) => (<DroppableColumn
                         key={index}
                         columnId={`${element.id}-column-${index}`}
-                        elements={element.columns[index] || []}
+                    elements={element.columns?.[index] || []}
                         onDelete={onDelete}
                         onSelect={onSelect}
                         selectedElementId={selectedElementId}
@@ -35,45 +37,83 @@ function ColumnRow({element, onDelete, onSelect, selectedElementId}) {
 function DroppableColumn({columnId, elements, onDelete, onSelect, selectedElementId}) {
     const {isOver, setNodeRef} = useDroppable({
         id: columnId,
+        data: { type: 'container', containerId: columnId },
     });
 
     return (<div
             ref={setNodeRef}
             className={`column ${isOver ? 'column--active' : ''}`}
         >
-            {elements.length === 0 ? (<p className="column__empty">Drop here</p>) : (elements.map((el) => (<div
-                        key={el.id}
-                        role="button"
-                        tabIndex={0}
-                        className={`column__element ${selectedElementId === el.id ? 'column__element--selected' : ''}`}
-                        onClick={() => onSelect(el.id)}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                onSelect(el.id);
-                            }
-                        }}
-                    >
-                        <div className="column__element-header">
-                            <span className="column__element-label">{el.name || 'Untitled field'}</span>
-                            <span className="column__element-type">{el.type}</span>
-                            <button
-                                type="button"
-                                className="column__element-delete"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete(el.id);
-                                }}
-                                aria-label="Remove element"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="column__element-body">
-                            {renderElementPreview(el)}
-                        </div>
-                    </div>)))}
+            {elements.length === 0 ? (
+                <p className="column__empty">Drop here</p>
+            ) : (
+                <SortableContext items={elements.map((el) => el.id)} strategy={verticalListSortingStrategy}>
+                    {elements.map((el, index) => (
+                        <SortableColumnElement
+                            key={el.id}
+                            element={el}
+                            index={index}
+                            columnId={columnId}
+                            onDelete={onDelete}
+                            onSelect={onSelect}
+                            selectedElementId={selectedElementId}
+                        />
+                    ))}
+                </SortableContext>
+            )}
         </div>);
+}
+
+function SortableColumnElement({ element, index, columnId, onDelete, onSelect, selectedElementId }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: element.id,
+        data: { source: 'canvas', type: 'element', containerId: columnId, index },
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        cursor: 'grab',
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            role="button"
+            tabIndex={0}
+            className={`column__element ${selectedElementId === element.id ? 'column__element--selected' : ''}`}
+            onClick={() => onSelect(element.id)}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelect(element.id);
+                }
+            }}
+        >
+            <div className="column__element-header">
+                <span className="drag-handle drag-handle--column" {...listeners} {...attributes} aria-label="Drag to reorder" role="button" />
+                <span className="column__element-label">{element.name || 'Untitled field'}</span>
+                <span className="column__element-type">{element.type}</span>
+                <button
+                    type="button"
+                    className="column__element-delete"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(element.id);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    aria-label="Remove element"
+                >
+                    ×
+                </button>
+            </div>
+            <div className="column__element-body">
+                {renderElementPreview(element)}
+            </div>
+        </div>
+    );
 }
 
 const formatDateValue = (dateStr, format) => {
