@@ -8,7 +8,9 @@
 },
   "dependencies": {
     "@date-io/date-fns": "^3.0.0",
-    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/core": "^6.0.10",
+    "@dnd-kit/sortable": "^7.0.2",
+    "@dnd-kit/utilities": "^3.2.1",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.1.6",

@@ -4,6 +4,7 @@ import { useDraggable } from '@dnd-kit/core';
 function DraggableItem({ item }) {
     const { attributes, listeners, setNodeRef } = useDraggable({
         id: item.id,
+        data: { source: 'palette', type: item.id },
     });
 
     return (
