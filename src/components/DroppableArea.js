@@ -1,7 +1,59 @@
 import React, { useCallback, useRef } from 'react';
 import {useDroppable} from '@dnd-kit/core';
 import ColumnRow from './ColumnRow';
-import {Button, Checkbox, FormControlLabel, Rating, Switch, TextField} from "@mui/material";
+import {Button, Checkbox, CircularProgress, FormControlLabel, Rating, Switch, TextField} from "@mui/material";
+import SaveIcon from '@mui/icons-material/Save';
+import SendIcon from '@mui/icons-material/Send';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CheckIcon from '@mui/icons-material/Check';
+
+// Format an ISO yyyy-mm-dd string into the chosen display format for non-ISO inputs.
+const formatDateValue = (dateStr, format) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [yyyy, mm, dd] = parts;
+    switch (format) {
+        case 'MM/DD/YYYY':
+            return `${mm}/${dd}/${yyyy}`;
+        case 'DD/MM/YYYY':
+            return `${dd}/${mm}/${yyyy}`;
+        case 'DD.MM.YYYY':
+            return `${dd}.${mm}.${yyyy}`;
+        default:
+            return dateStr;
+    }
+};
+
+const dateFormatPattern = (format) => {
+    switch (format) {
+        case 'MM/DD/YYYY':
+        case 'DD/MM/YYYY':
+            return '^\\d{2}/\\d{2}/\\d{4}$';
+        case 'DD.MM.YYYY':
+            return '^\\d{2}\\.\\d{2}\\.\\d{4}$';
+        default:
+            return '^\\d{4}-\\d{2}-\\d{2}$';
+    }
+};
+
+const iconForName = (name) => {
+    switch (name) {
+        case 'save':
+            return <SaveIcon fontSize="small" />;
+        case 'send':
+            return <SendIcon fontSize="small" />;
+        case 'add':
+            return <AddIcon fontSize="small" />;
+        case 'delete':
+            return <DeleteIcon fontSize="small" />;
+        case 'check':
+            return <CheckIcon fontSize="small" />;
+        default:
+            return null;
+    }
+};
 
 function DroppableArea({formElements, onDelete, onSelect, selectedElementId}) {
     const canvasRef = useRef(null);
@@ -92,7 +144,7 @@ function renderElement(element) {
             return (
                 <input
                     type="text"
-                    placeholder="Text Field"
+                    placeholder={element.placeholder || 'Enter text'}
                     style={{
                         width: '100%',
                         padding: '12px',
@@ -127,8 +179,16 @@ function renderElement(element) {
                 <Button
                     variant={element.variant}
                     color={element.color}
-                    disabled={element.disabled || false}
+                    size={element.size || 'medium'}
+                    fullWidth={!!element.fullWidth}
+                    type={element.typeAttr || 'button'}
+                    disableElevation={!!element.disableElevation}
+                    disabled={!!element.disabled || !!element.loading}
                     href={element.href || null}
+                    target={element.target || '_self'}
+                    startIcon={element.loading ? <CircularProgress size={16} color="inherit" /> : iconForName(element.startIcon)}
+                    endIcon={element.loading ? null : iconForName(element.endIcon)}
+                    sx={{ borderRadius: element.borderRadius ?? 8 }}
                 >
                     {element.label || 'Button'}
                 </Button>
@@ -161,29 +221,53 @@ function renderElement(element) {
                 </select>
             );
         case 'date':
+            const format = element.dateFormat || 'YYYY-MM-DD';
+            const isIso = format === 'YYYY-MM-DD';
+            const pattern = dateFormatPattern(format);
+            const formattedDefault = isIso ? element.defaultDate || '' : formatDateValue(element.defaultDate, format);
+            const formattedMin = isIso ? element.minDate || '' : formatDateValue(element.minDate, format);
+            const formattedMax = isIso ? element.maxDate || '' : formatDateValue(element.maxDate, format);
+            const rangeHint = [
+                formattedMin ? `Min ${formattedMin}` : null,
+                formattedMax ? `Max ${formattedMax}` : null,
+            ].filter(Boolean).join(' · ') || undefined;
             return (
-                <input
-                    type="date"
-                    style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: '1px solid #ccc',
-                        boxSizing: 'border-box',
+                <TextField
+                    type={isIso ? 'date' : 'text'}
+                    fullWidth
+                    defaultValue={formattedDefault}
+                    placeholder={format}
+                    inputProps={{
+                        min: isIso ? element.minDate || undefined : undefined,
+                        max: isIso ? element.maxDate || undefined : undefined,
+                        'data-min': !isIso && formattedMin ? formattedMin : undefined,
+                        'data-max': !isIso && formattedMax ? formattedMax : undefined,
+                        'data-format': format,
+                        pattern,
                     }}
+                    helperText={rangeHint}
+                    InputLabelProps={{ shrink: true }}
                 />
             );
         case 'rating':
             return (
-                <Rating name="half-rating" defaultValue={2.5} precision={0.5}/>
+                <Rating
+                    name={`rating-${element.id}`}
+                    defaultValue={element.defaultValue ?? 0}
+                    precision={element.precision ?? 0.5}
+                    max={element.max ?? 5}
+                />
             );
         case 'slider':
             return (
                 <input
                     type="range"
-                    min="0"
-                    max="100"
+                    min={element.min ?? 0}
+                    max={element.max ?? 100}
+                    step={element.step ?? 1}
+                    defaultValue={element.defaultValue ?? element.min ?? 0}
                     style={{width: '100%', accentColor: '#007bff'}}
+                    aria-label={element.name || 'Slider'}
                 />
             );
         case 'textarea':
@@ -210,7 +294,12 @@ function renderElement(element) {
             );
         case 'phone':
             return (
-                <TextField type="tel" placeholder={element.placeholder || '(555) 123-4567'} fullWidth />
+                <TextField
+                    type="tel"
+                    placeholder={element.placeholder || '(555) 123-4567'}
+                    fullWidth
+                    inputProps={{ pattern: element.pattern || undefined }}
+                />
             );
         case 'toggle':
             return (

@@ -27,7 +27,37 @@ import {
     Switch,
     Rating,
     Slider,
+    Tooltip,
 } from '@mui/material';
+
+const formatDateValue = (dateStr, format) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const [yyyy, mm, dd] = parts;
+    switch (format) {
+        case 'MM/DD/YYYY':
+            return `${mm}/${dd}/${yyyy}`;
+        case 'DD/MM/YYYY':
+            return `${dd}/${mm}/${yyyy}`;
+        case 'DD.MM.YYYY':
+            return `${dd}.${mm}.${yyyy}`;
+        default:
+            return dateStr;
+    }
+};
+
+const dateFormatPattern = (format) => {
+    switch (format) {
+        case 'MM/DD/YYYY':
+        case 'DD/MM/YYYY':
+            return '^\\d{2}/\\d{2}/\\d{4}$';
+        case 'DD.MM.YYYY':
+            return '^\\d{2}\\.\\d{2}\\.\\d{4}$';
+        default:
+            return '^\\d{4}-\\d{2}-\\d{2}$';
+    }
+};
 import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -148,13 +178,19 @@ function FormsPage() {
                         <Typography variant="body2" color="text.secondary">Load, duplicate, or delete forms saved in the backend.</Typography>
                     </div>
                     <Stack direction="row" spacing={1}>
-                        <Button variant="outlined" onClick={refresh} startIcon={<RefreshIcon />} disabled={loading}>
-                            Refresh
-                        </Button>
-                        <Button variant="outlined" color="inherit" onClick={() => navigate('/')}>
-                            Back to Builder
-                        </Button>
-                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/')}>New Form</Button>
+                        <Tooltip title="Reload the forms list" arrow>
+                            <span>
+                                <Button variant="outlined" onClick={refresh} startIcon={<RefreshIcon />} disabled={loading}>
+                                    Refresh
+                                </Button>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Return to the builder" arrow>
+                            <Button variant="outlined" color="inherit" onClick={() => navigate('/')}>Back to Builder</Button>
+                        </Tooltip>
+                        <Tooltip title="Start a new blank form" arrow>
+                            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/')}>New Form</Button>
+                        </Tooltip>
                     </Stack>
                 </Stack>
 
@@ -187,18 +223,28 @@ function FormsPage() {
                                     <ListItem
                                         secondaryAction={
                                             <Stack direction="row" spacing={1}>
-                                                <IconButton edge="end" aria-label="preview" onClick={() => setPreviewForm(form)}>
-                                                    <OpenInNewIcon />
-                                                </IconButton>
-                                                <IconButton edge="end" aria-label="rename" onClick={() => openRenameDialog(form)}>
-                                                    <EditIcon />
-                                                </IconButton>
-                                                <IconButton edge="end" aria-label="duplicate" onClick={() => openDuplicateDialog(form)}>
-                                                    <ContentCopyIcon />
-                                                </IconButton>
-                                                <IconButton edge="end" aria-label="delete" color="error" disabled={deleteId === id} onClick={() => handleDelete(id)}>
-                                                    <DeleteIcon />
-                                                </IconButton>
+                                                <Tooltip title="Preview this form" arrow>
+                                                    <IconButton edge="end" aria-label="preview" onClick={() => setPreviewForm(form)}>
+                                                        <OpenInNewIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Rename this form" arrow>
+                                                    <IconButton edge="end" aria-label="rename" onClick={() => openRenameDialog(form)}>
+                                                        <EditIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Duplicate this form" arrow>
+                                                    <IconButton edge="end" aria-label="duplicate" onClick={() => openDuplicateDialog(form)}>
+                                                        <ContentCopyIcon />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Delete this form" arrow>
+                                                    <span>
+                                                        <IconButton edge="end" aria-label="delete" color="error" disabled={deleteId === id} onClick={() => handleDelete(id)}>
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
                                             </Stack>
                                         }
                                     >
@@ -304,6 +350,7 @@ function RenderedField({ field }) {
                     type={field.type === 'phone' ? 'tel' : field.type}
                     label={label}
                     placeholder={field.placeholder || ''}
+                    inputProps={{ pattern: field.pattern || undefined }}
                 />
             );
         case 'textarea':
@@ -354,19 +401,56 @@ function RenderedField({ field }) {
                 </div>
             );
         case 'date':
-            return <TextField type="date" fullWidth label={label} InputLabelProps={{ shrink: true }} />;
+            const format = field.dateFormat || 'YYYY-MM-DD';
+            const isIso = format === 'YYYY-MM-DD';
+            const pattern = dateFormatPattern(format);
+            const formattedDefault = isIso ? field.defaultDate || '' : formatDateValue(field.defaultDate, format);
+            const formattedMin = isIso ? field.minDate || '' : formatDateValue(field.minDate, format);
+            const formattedMax = isIso ? field.maxDate || '' : formatDateValue(field.maxDate, format);
+            const rangeHint = [
+                formattedMin ? `Min ${formattedMin}` : null,
+                formattedMax ? `Max ${formattedMax}` : null,
+            ].filter(Boolean).join(' · ') || undefined;
+            return (
+                <TextField
+                    type={isIso ? 'date' : 'text'}
+                    fullWidth
+                    label={label}
+                    defaultValue={formattedDefault}
+                    placeholder={format}
+                    inputProps={{
+                        min: isIso ? field.minDate || undefined : undefined,
+                        max: isIso ? field.maxDate || undefined : undefined,
+                        'data-min': !isIso && formattedMin ? formattedMin : undefined,
+                        'data-max': !isIso && formattedMax ? formattedMax : undefined,
+                        'data-format': format,
+                        pattern,
+                    }}
+                    helperText={rangeHint}
+                    InputLabelProps={{ shrink: true }}
+                />
+            );
         case 'slider':
             return (
                 <div>
                     <Typography variant="subtitle2" sx={{ mb: 0.5 }}>{label}</Typography>
-                    <Slider defaultValue={50} />
+                    <Slider
+                        defaultValue={field.defaultValue ?? field.min ?? 0}
+                        min={field.min ?? 0}
+                        max={field.max ?? 100}
+                        step={field.step ?? 1}
+                    />
                 </div>
             );
         case 'rating':
             return (
                 <div>
                     <Typography variant="subtitle2" sx={{ mb: 0.5 }}>{label}</Typography>
-                    <Rating precision={0.5} />
+                    <Rating
+                        precision={field.precision ?? 0.5}
+                        max={field.max ?? 5}
+                        defaultValue={field.defaultValue ?? 0}
+                    />
                 </div>
             );
         case 'toggle':
