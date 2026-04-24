@@ -15,7 +15,7 @@ import { useBuilderStore } from '../state/builderStore';
 /**
  * Paste-or-upload JSON to seed the canvas. Validates structure before applying.
  */
-export default function ImportDialog({ open, onClose }) {
+export default function ImportDialog({ open, onClose, onImported }) {
     const formElements = useBuilderStore((s) => s.formElements);
     const loadElementsFromImport = useBuilderStore((s) => s.loadElementsFromImport);
 
@@ -34,6 +34,7 @@ export default function ImportDialog({ open, onClose }) {
         try {
             const parsed = JSON.parse(raw || '[]');
             loadElementsFromImport(parsed);
+            if (onImported) onImported();
             onClose();
         } catch (err) {
             setError(err.message || 'Invalid JSON. Please check the format.');

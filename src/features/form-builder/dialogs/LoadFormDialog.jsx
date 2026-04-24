@@ -17,7 +17,7 @@ import {
  * Picks one of the saved forms and hands it back via `onLoad(id)`.
  * The actual fetch happens in the parent so this dialog stays presentational.
  */
-export default function LoadFormDialog({ open, onClose, forms, isLoading, error, onLoad }) {
+export default function LoadFormDialog({ open, onClose, forms, isLoading, error = '', onLoad }) {
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
             <DialogTitle>Load a saved form</DialogTitle>

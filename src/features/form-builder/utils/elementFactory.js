@@ -86,7 +86,17 @@ export const createElement = (type) => {
     }
 
     if (layoutTypes.has(type)) {
-        element.columns = Array.from({ length: getColumnCount(type) }, () => []);
+        const count = getColumnCount(type);
+        element.columns = Array.from({ length: count }, () => []);
+        // Layout-level visual properties – kept in sync with the schema rendered
+        // in EditSidebar's "Layout" sections and consumed by ColumnRow + codegen.
+        element.gap = 16;                                  // px between columns
+        element.verticalAlign = 'stretch';                 // start | center | end | stretch
+        element.columnRatios = Array.from({ length: count }, () => 1); // equal weights
+        element.stackOnMobile = true;
+        element.padding = 12;                              // inner padding of the row
+        element.background = 'muted';                      // none | muted | accent
+        element.border = 'dashed';                         // none | dashed | solid
     }
 
     return element;

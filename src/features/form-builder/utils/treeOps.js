@@ -80,3 +80,22 @@ export const removeElementById = (elements, id) => {
     return didChange ? filtered : elements;
 };
 
+/**
+ * Locate where in the tree an element lives so we can insert a duplicate
+ * directly after it. Returns `{ containerId, index }` or `null`.
+ */
+export const locateElement = (elements, id) => {
+    for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        if (el.id === id) return { containerId: 'root', index: i };
+        if (Array.isArray(el.columns)) {
+            for (let c = 0; c < el.columns.length; c++) {
+                const col = el.columns[c] || [];
+                const idx = col.findIndex((child) => child.id === id);
+                if (idx !== -1) return { containerId: `${el.id}-column-${c}`, index: idx };
+            }
+        }
+    }
+    return null;
+};
+

@@ -31,27 +31,50 @@ export const renderElementCode = (
         case 'fourColumnRow': {
             gridImports.add('Grid');
             const columnCount = getColumnCount(element.type) || 1;
-            const itemSpan = Math.max(1, Math.floor(12 / columnCount));
             const normalizedColumns = Array.from(
                 { length: columnCount },
                 (_, idx) => element.columns?.[idx] || []
             );
 
+            // Convert custom column ratios → 12-column MUI spans. Falls back to
+            // equal spans when ratios aren't provided or don't match the count.
+            const ratios =
+                Array.isArray(element.columnRatios) && element.columnRatios.length === columnCount
+                    ? element.columnRatios.map((r) => Math.max(0.1, Number(r) || 1))
+                    : Array.from({ length: columnCount }, () => 1);
+            const ratioSum = ratios.reduce((sum, r) => sum + r, 0) || columnCount;
+            const spans = ratios.map((r) => Math.max(1, Math.round((r / ratioSum) * 12)));
+
+            // Translate px gap → MUI spacing units (8px scale). Default 16px → 2.
+            const gapPx = Number.isFinite(element.gap) ? element.gap : 16;
+            const spacing = Math.max(0, Math.round(gapPx / 8));
+
+            const alignMap = {
+                start: 'flex-start',
+                center: 'center',
+                end: 'flex-end',
+                stretch: 'stretch',
+            };
+            const alignItems = alignMap[element.verticalAlign] || 'stretch';
+            const alignProp =
+                alignItems !== 'stretch' ? ` alignItems="${alignItems}"` : '';
+
             const childrenCode = normalizedColumns
-                .map((col) => {
+                .map((col, colIdx) => {
                     const inner = (col || [])
                         .map((child) => renderElementCode(child, imports, level + 2, iconImports))
                         .filter(Boolean)
                         .join('\n');
                     const body = inner || `${indent(level + 3)}{/* Add a field here */}`;
+                    const mdSpan = spans[colIdx] || Math.max(1, Math.floor(12 / columnCount));
                     return (
-                        `${indent(level + 1)}<Grid xs={12} md={${itemSpan}}>` +
+                        `${indent(level + 1)}<Grid xs={12} md={${mdSpan}}>` +
                         `\n${body}\n${indent(level + 1)}</Grid>`
                     );
                 })
                 .join('\n');
 
-            return `${indent(level)}<Grid container spacing={2}>\n${childrenCode}\n${indent(level)}</Grid>`;
+            return `${indent(level)}<Grid container spacing={${spacing}}${alignProp}>\n${childrenCode}\n${indent(level)}</Grid>`;
         }
         case 'text':
             imports.add('TextField');

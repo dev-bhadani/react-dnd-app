@@ -10,17 +10,52 @@ function ColumnRow({ element }) {
     const onDelete = useBuilderStore((s) => s.deleteElement);
     const columns = getColumnCount(element.type) || 1;
 
+    // Pull layout-level visual props with safe fallbacks (older saved forms
+    // won't have them set yet).
+    const gap = Number.isFinite(element.gap) ? element.gap : 10;
+    const padding = Number.isFinite(element.padding) ? element.padding : 12;
+    const verticalAlign = element.verticalAlign || 'stretch';
+    const stackOnMobile = element.stackOnMobile !== false;
+    const background = element.background || 'muted';
+    const border = element.border || 'dashed';
+
+    const ratios = Array.isArray(element.columnRatios) && element.columnRatios.length === columns
+        ? element.columnRatios
+        : Array.from({ length: columns }, () => 1);
+
+    const gridTemplateColumns = ratios
+        .map((r) => `${Math.max(0.1, Number(r) || 1)}fr`)
+        .join(' ');
+
+    const bgVar = {
+        none: 'transparent',
+        muted: 'var(--fc-bg-muted)',
+        accent: 'rgba(79, 70, 229, 0.06)',
+    }[background] || 'var(--fc-bg-muted)';
+
+    const borderStyle = border === 'none' ? 'none' : `1px ${border} var(--fc-border-dashed)`;
+
     return (
-        <div className="column-row">
+        <div
+            className="column-row"
+            style={{ padding, background: bgVar, border: borderStyle }}
+        >
             <button
                 type="button"
                 className="column-row__delete"
-                onClick={() => onDelete(element.id)}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(element.id);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
                 aria-label="Remove row"
             >
                 &times;
             </button>
-            <div className={`column-row__grid columns-${columns}`}>
+            <div
+                className={`column-row__grid ${stackOnMobile ? 'column-row__grid--stack-mobile' : ''}`}
+                style={{ display: 'grid', gridTemplateColumns, gap, alignItems: verticalAlign }}
+            >
                 {Array.from({ length: columns }, (_, index) => (
                     <DroppableColumn
                         key={index}
@@ -87,10 +122,14 @@ const SortableColumnElement = React.memo(function SortableColumnElement({ elemen
             tabIndex={0}
             aria-pressed={isSelected}
             className={`column__element ${isSelected ? 'column__element--selected' : ''}`}
-            onClick={() => onSelect(element.id)}
+            onClick={(event) => {
+                event.stopPropagation();
+                onSelect(element.id);
+            }}
             onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
+                    event.stopPropagation();
                     onSelect(element.id);
                 }
             }}
