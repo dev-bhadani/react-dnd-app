@@ -1,8 +1,12 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 
+/**
+ * A single palette entry. Memoized — re-renders are pointless because the
+ * `item` object is module-level constant.
+ */
 function DraggableItem({ item }) {
-    const { attributes, listeners, setNodeRef } = useDraggable({
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: item.id,
         data: { source: 'palette', type: item.id },
     });
@@ -12,6 +16,7 @@ function DraggableItem({ item }) {
             ref={setNodeRef}
             type="button"
             className="draggable-item"
+            data-dragging={isDragging || undefined}
             {...listeners}
             {...attributes}
         >
@@ -24,4 +29,5 @@ function DraggableItem({ item }) {
     );
 }
 
-export default DraggableItem;
+export default React.memo(DraggableItem);
+

@@ -43,17 +43,16 @@ function Sidebar() {
         <aside className="sidebar-container" aria-label="Form elements library">
             <div className="sidebar__header">
                 <h3>Form Elements</h3>
-                <p>Drag an item into the canvas or double-click to add it instantly.</p>
+                <p>Drag an item into the canvas to add it.</p>
             </div>
             <div className="sidebar__items">
-                {items && items.length > 0 ? (
-                    items.map((item) => <DraggableItem key={item.id} item={item} />)
-                ) : (
-                    <div className="sidebar__empty">No items available</div>
-                )}
+                {items.map((item) => (
+                    <DraggableItem key={item.id} item={item} />
+                ))}
             </div>
         </aside>
     );
 }
 
-export default Sidebar;
+export default React.memo(Sidebar);
+
