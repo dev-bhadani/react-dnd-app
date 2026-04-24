@@ -18,12 +18,61 @@ FormCraft is a React single-page application that lets you visually build forms 
 | Layer | Library / Tool |
 |---|---|
 | UI framework | [React 18](https://react.dev/) |
-| Component library | [MUI v6](https://mui.com/) |
+| Component library | [MUI v6](https://mui.com/) (centralized theme in `src/app/theme.js`) |
+| State management | [Zustand](https://github.com/pmndrs/zustand) — single store in `src/features/form-builder/state/builderStore.js` |
 | Drag-and-drop | [@dnd-kit/core](https://docs.dndkit.com/) + @dnd-kit/sortable |
-| Routing | [React Router v6](https://reactrouter.com/) |
+| Routing | [React Router v6](https://reactrouter.com/) — routes are code-split via `React.lazy` |
 | Date picker | [@mui/x-date-pickers](https://mui.com/x/react-date-pickers/) + date-fns |
-| Compression | [lz-string](https://pieroxy.net/blog/pages/lz-string/index.html) |
+| Compression | [lz-string](https://pieroxy.net/blog/pages/lz-string/index.html) — loaded lazily on demand |
 | Build tool | [Create React App](https://create-react-app.dev/) |
+| Formatting | [Prettier](https://prettier.io/) — config in `.prettierrc` |
+
+## Project Structure
+
+The codebase is organized **feature-first**. Every page-level feature lives
+under `src/features/<feature-name>/` and owns its own components, state,
+utilities, and dialogs. Cross-feature primitives go in `src/shared/`.
+
+```
+src/
+├── app/
+│   └── theme.js                       # MUI theme — single source of brand truth
+├── styles/
+│   └── app.css                        # Global layout + design tokens (CSS vars)
+├── shared/
+│   ├── api/                           # REST client + endpoints
+│   └── utils/                         # dateFormat.js, iconForName.jsx
+├── features/
+│   ├── form-builder/
+│   │   ├── components/                # BuilderApp, BuilderHeader, Sidebar,
+│   │   │                              # DroppableArea, ColumnRow, EditSidebar,
+│   │   │                              # CanvasElementPreview, DraggableItem,
+│   │   │                              # FormPreview
+│   │   ├── dialogs/                   # CodeDialog, ExportDialog,
+│   │   │                              # ImportDialog, LoadFormDialog
+│   │   ├── state/builderStore.js      # Zustand store + selectors
+│   │   ├── utils/                     # treeOps, containerOps,
+│   │   │                              # elementFactory, fieldMapping, layout
+│   │   └── codegen/                   # generateReactCode + sandbox payload
+│   └── forms-list/
+│       └── FormsPage.jsx
+├── App.jsx                            # Router shell — routes are React.lazy
+└── index.js                           # ThemeProvider + CssBaseline + StrictMode
+```
+
+### Key architectural conventions
+
+- **State lives in Zustand**, not in components. Components subscribe to
+  *narrow* slices (`useBuilderStore((s) => s.formElements)`) so unrelated
+  state changes don't trigger re-renders.
+- **Pure helpers are pure files**. Tree mutations (`treeOps.js`), drag/drop
+  container math (`containerOps.js`), and codegen are framework-free and
+  trivially unit-testable.
+- **Code-splitting** — every dialog, the preview, both routes, and `lz-string`
+  are loaded on demand via `React.lazy` / dynamic `import()`.
+- **Brand tokens** live as CSS custom properties in `src/styles/app.css` and
+  as the MUI theme in `src/app/theme.js`. Don't hard-code colors or radii in
+  components.
 
 ## Prerequisites
 
