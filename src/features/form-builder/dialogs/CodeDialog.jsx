@@ -13,6 +13,8 @@ import {
 import { useBuilderStore } from '../state/builderStore';
 import { generateReactCode } from '../codegen/generateReactCode';
 import { buildCodeSandboxParameters } from '../codegen/sandbox';
+import { flattenElementsToFields } from '../utils/fieldMapping';
+import { exportProjectZip } from '../../../shared/api/forms';
 
 /**
  * Generates JSX/TSX from the current canvas and offers Copy + Open-in-Sandbox.
@@ -27,6 +29,7 @@ export default function CodeDialog({ open, onClose }) {
     const [componentName, setComponentName] = useState('GeneratedForm');
     const [error, setError] = useState('');
     const [isSandboxing, setIsSandboxing] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
         if (!open) return;
@@ -66,6 +69,26 @@ export default function CodeDialog({ open, onClose }) {
             setError(err.message || 'Failed to open CodeSandbox');
         } finally {
             setIsSandboxing(false);
+        }
+    };
+
+    const handleDownloadZip = async () => {
+        setIsDownloading(true);
+        try {
+            const fields = flattenElementsToFields(formElements);
+            const { blob, filename } = await exportProjectZip({ name: formName, fields });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setError(err.message || 'Failed to download project');
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -112,6 +135,9 @@ export default function CodeDialog({ open, onClose }) {
                 </Button>
                 <Button onClick={handleOpenSandbox} disabled={!code || isSandboxing} color="inherit">
                     {isSandboxing ? 'Opening…' : `Open in CodeSandbox`}
+                </Button>
+                <Button onClick={handleDownloadZip} disabled={!code || isDownloading} color="inherit">
+                    {isDownloading ? 'Preparing…' : 'Download project (.zip)'}
                 </Button>
                 <Button onClick={onClose} variant="contained">
                     Close
