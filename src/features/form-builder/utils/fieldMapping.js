@@ -116,6 +116,32 @@ export const flattenElementsToFields = (elements) => {
     return fields;
 };
 
+/**
+ * Serialises the canvas for the server-side export.
+ *
+ * Unlike `flattenElementsToFields`, which deliberately drops layout containers
+ * because the stored form schema is flat, this keeps the rows intact (with
+ * their column ratios, gap, and alignment) so the exported project reproduces
+ * the multi-column layout the user designed.
+ */
+export const elementsToExportNodes = (elements) =>
+    (elements || [])
+        .map((node) => {
+            if (layoutTypes.has(node.type)) {
+                const columns = Array.isArray(node.columns) ? node.columns : [];
+                return {
+                    type: node.type,
+                    columns: columns.map((column) => elementsToExportNodes(column || [])),
+                    gap: node.gap ?? 16,
+                    columnRatios: Array.isArray(node.columnRatios) ? node.columnRatios : undefined,
+                    verticalAlign: node.verticalAlign || 'stretch',
+                    stackOnMobile: node.stackOnMobile !== false,
+                };
+            }
+            return elementToField(node);
+        })
+        .filter(Boolean);
+
 export const fieldsToElements = (fields) => {
     if (!Array.isArray(fields)) return [];
 

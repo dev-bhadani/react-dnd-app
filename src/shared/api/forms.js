@@ -38,13 +38,14 @@ export async function deleteForm(id) {
  * Requests a runnable React project from the backend and returns it as a
  * downloadable ZIP blob. The server generates the project in memory and streams
  * it back, so this uses a raw fetch (the shared `request` helper only parses
- * JSON/text). `fields` is the flattened field list the export template expects.
+ * JSON/text). `nodes` is the element list the export template expects: fields
+ * plus any layout rows, which carry their children in `columns`.
  */
-export async function exportProjectZip({ name, fields }) {
+export async function exportProjectZip({ name, nodes }) {
     const response = await fetch(`${API_BASE_URL}/api/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, elements: fields }),
+        body: JSON.stringify({ name, elements: nodes }),
     });
 
     if (!response.ok) {
