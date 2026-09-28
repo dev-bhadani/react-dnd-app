@@ -13,7 +13,7 @@ import {
 import { useBuilderStore } from '../state/builderStore';
 import { generateReactCode } from '../codegen/generateReactCode';
 import { buildCodeSandboxParameters } from '../codegen/sandbox';
-import { elementsToExportNodes } from '../utils/fieldMapping';
+import { elementsToNodes } from '../utils/fieldMapping';
 import { exportProjectZip } from '../../../shared/api/forms';
 
 /**
@@ -75,7 +75,7 @@ export default function CodeDialog({ open, onClose }) {
     const handleDownloadZip = async () => {
         setIsDownloading(true);
         try {
-            const nodes = elementsToExportNodes(formElements);
+            const nodes = elementsToNodes(formElements);
             const { blob, filename } = await exportProjectZip({ name: formName, nodes });
             const url = URL.createObjectURL(blob);
             const anchor = document.createElement('a');

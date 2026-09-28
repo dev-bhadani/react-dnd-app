@@ -13,6 +13,8 @@ import {
     Stack,
 } from '@mui/material';
 
+import { countFields } from '../utils/elementOps';
+
 /**
  * Picks one of the saved forms and hands it back via `onLoad(id)`.
  * The actual fetch happens in the parent so this dialog stays presentational.
@@ -33,15 +35,12 @@ export default function LoadFormDialog({ open, onClose, forms, isLoading, error 
                     <List>
                         {forms.map((form) => {
                             const formId = form.id || form._id;
+                            const fieldCount = countFields(form.fields);
                             return (
                                 <ListItemButton key={formId} onClick={() => onLoad(formId)}>
                                     <ListItemText
                                         primary={form.name || 'Untitled Form'}
-                                        secondary={
-                                            form.fields?.length
-                                                ? `${form.fields.length} fields`
-                                                : '0 fields'
-                                        }
+                                        secondary={fieldCount ? `${fieldCount} fields` : '0 fields'}
                                     />
                                 </ListItemButton>
                             );

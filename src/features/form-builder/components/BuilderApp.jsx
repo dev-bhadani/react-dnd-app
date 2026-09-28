@@ -20,7 +20,7 @@ import CanvasElementPreview from './CanvasElementPreview';
 
 import { useBuilderStore, useSelectedElement } from '../state/builderStore';
 import { findElementById } from '../utils/treeOps';
-import { flattenElementsToFields } from '../utils/fieldMapping';
+import { elementsToNodes } from '../utils/fieldMapping';
 import { listForms, getForm, createForm, updateForm, deleteForm } from '../../../shared/api/forms';
 import { useToasts } from '../../../shared/ui/Toasts';
 import { useKeyboardShortcuts } from '../../../shared/hooks/useKeyboardShortcuts';
@@ -195,7 +195,7 @@ export default function BuilderApp() {
     const handleSaveForm = useCallback(async () => {
         const payload = {
             name: formName || 'Untitled Form',
-            fields: flattenElementsToFields(formElements),
+            fields: elementsToNodes(formElements),
         };
         setIsSavingForm(true);
         try {

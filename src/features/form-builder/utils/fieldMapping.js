@@ -3,8 +3,10 @@ import { layoutTypes } from './layout';
 
 /**
  * Conversions between the rich element-tree used by the builder and the
- * flat `field[]` payload stored in the backend. Layout containers are
- * flattened on save (their children become siblings), and rebuilt on load.
+ * `field[]` payload stored in the backend. Layout rows are stored as nodes
+ * that carry their children in `columns`, so the tree survives a save and
+ * reload. Forms saved before rows were stored are plain field lists; they
+ * contain no layout nodes and load unchanged.
  */
 
 export const elementToField = (element) => {
@@ -100,57 +102,65 @@ export const elementToField = (element) => {
     return field;
 };
 
-export const flattenElementsToFields = (elements) => {
-    const fields = [];
-    const walk = (nodes) => {
-        nodes.forEach((node) => {
-            if (layoutTypes.has(node.type) && Array.isArray(node.columns)) {
-                node.columns.forEach((col) => walk(col || []));
-                return;
-            }
-            const field = elementToField(node);
-            if (field) fields.push(field);
-        });
-    };
-    walk(elements || []);
-    return fields;
-};
-
 /**
- * Serialises the canvas for the server-side export.
+ * Serialises the canvas for saving and for the server-side export.
  *
- * Unlike `flattenElementsToFields`, which deliberately drops layout containers
- * because the stored form schema is flat, this keeps the rows intact (with
- * their column ratios, gap, and alignment) so the exported project reproduces
- * the multi-column layout the user designed.
+ * Layout rows are kept intact (with their column ratios, gap, alignment, and
+ * row styling) so a reloaded form and the exported project both reproduce the
+ * multi-column layout the user designed. The export template ignores the
+ * canvas-only styling keys (padding, background, border).
  */
-export const elementsToExportNodes = (elements) =>
+export const elementsToNodes = (elements) =>
     (elements || [])
         .map((node) => {
             if (layoutTypes.has(node.type)) {
                 const columns = Array.isArray(node.columns) ? node.columns : [];
                 return {
                     type: node.type,
-                    columns: columns.map((column) => elementsToExportNodes(column || [])),
+                    columns: columns.map((column) => elementsToNodes(column || [])),
                     gap: node.gap ?? 16,
                     columnRatios: Array.isArray(node.columnRatios) ? node.columnRatios : undefined,
                     verticalAlign: node.verticalAlign || 'stretch',
                     stackOnMobile: node.stackOnMobile !== false,
+                    padding: node.padding ?? 12,
+                    background: node.background || 'muted',
+                    border: node.border || 'dashed',
                 };
             }
             return elementToField(node);
         })
         .filter(Boolean);
 
-export const fieldsToElements = (fields) => {
+/**
+ * Rebuilds editor elements from stored nodes. `idCounter` is shared across the
+ * recursion so that fields inside columns never reuse an ID from elsewhere in
+ * the tree.
+ */
+export const fieldsToElements = (fields, idCounter = { v: Date.now() }) => {
     if (!Array.isArray(fields)) return [];
 
-    return fields.map((field, index) => {
+    return fields.map((field) => {
         const base = createElement(field.type);
-        const idSeed = Date.now() + index;
+        const idSeed = ++idCounter.v;
         const name = field.label || field.name || '';
         const options = Array.isArray(field.options) ? field.options : [];
 
+        if (layoutTypes.has(field.type)) {
+            const columns = Array.isArray(field.columns) ? field.columns : [];
+            const ratios = Array.isArray(field.columnRatios) ? field.columnRatios : [];
+            return {
+                ...base,
+                id: idSeed,
+                columns: base.columns.map((_, idx) => fieldsToElements(columns[idx] || [], idCounter)),
+                gap: field.gap ?? base.gap,
+                columnRatios: ratios.length === base.columns.length ? ratios : base.columnRatios,
+                verticalAlign: field.verticalAlign ?? base.verticalAlign,
+                stackOnMobile: field.stackOnMobile ?? base.stackOnMobile,
+                padding: field.padding ?? base.padding,
+                background: field.background ?? base.background,
+                border: field.border ?? base.border,
+            };
+        }
         if (field.type === 'select' || field.type === 'radio') {
             const rebuilt = {
                 ...base,

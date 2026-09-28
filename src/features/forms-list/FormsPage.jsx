@@ -38,6 +38,8 @@ import EditIcon from '@mui/icons-material/Edit';
 
 import { listForms, deleteForm, getForm, createForm, updateForm } from '../../shared/api/forms';
 import { dateFormatPattern, formatDateValue } from '../../shared/utils/dateFormat';
+import { countFields } from '../form-builder/utils/elementOps';
+import { isLayoutType } from '../form-builder/utils/layout';
 
 /**
  * Manages the user's saved forms — list, rename, duplicate, delete, preview.
@@ -205,8 +207,9 @@ export default function FormsPage() {
                     <List dense>
                         {forms.map((form) => {
                             const id = form.id || form._id;
+                            const fieldCount = countFields(form.fields);
                             const secondary = [
-                                form.fields?.length ? `${form.fields.length} field(s)` : '0 fields',
+                                fieldCount ? `${fieldCount} field(s)` : '0 fields',
                                 form.createdAt ? new Date(form.createdAt).toLocaleString() : null,
                             ]
                                 .filter(Boolean)
@@ -378,6 +381,24 @@ function EmptyState({ onCreate }) {
 function RenderedField({ field }) {
     const label = field.label || field.name || 'Field';
     const options = Array.isArray(field.options) ? field.options : [];
+
+    if (isLayoutType(field.type)) {
+        const columns = Array.isArray(field.columns) ? field.columns : [];
+        return (
+            <Stack
+                direction={field.stackOnMobile === false ? 'row' : { xs: 'column', sm: 'row' }}
+                spacing={2}
+            >
+                {columns.map((column, i) => (
+                    <Stack key={i} spacing={2} sx={{ flex: field.columnRatios?.[i] ?? 1, minWidth: 0 }}>
+                        {(column || []).map((child, j) => (
+                            <RenderedField key={j} field={child} />
+                        ))}
+                    </Stack>
+                ))}
+            </Stack>
+        );
+    }
 
     switch (field.type) {
         case 'text':
